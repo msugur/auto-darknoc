@@ -2,4 +2,17 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - grafana.yaml
-  - grafana-dashboards-configmap.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: dark-noc-grafana-provisioning
+    namespace: dark-noc-grafana
+    files:
+      - provisioning/dashboards.yaml
+      - provisioning/datasources.yaml
+  - name: dark-noc-grafana-dashboards
+    namespace: dark-noc-grafana
+    files:
+      - dashboards/01-exec-overview.json
+      - dashboards/02-llm-gpu-performance.json
+      - dashboards/03-langfuse-operations.json
