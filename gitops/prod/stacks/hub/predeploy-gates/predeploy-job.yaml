@@ -3,8 +3,6 @@ kind: Job
 metadata:
   name: predeploy-gate
   namespace: dark-noc-gitops
-  annotations:
-    argocd.argoproj.io/sync-wave: "-100"
 spec:
   template:
     spec:
