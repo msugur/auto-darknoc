@@ -4,6 +4,25 @@ metadata:
   name: dark-noc-grafana
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: dark-noc-grafana
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dark-noc-grafana-monitoring-view
+subjects:
+  - kind: ServiceAccount
+    name: grafana
+    namespace: dark-noc-grafana
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-monitoring-view
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-admin
@@ -28,6 +47,7 @@ spec:
       labels:
         app: grafana
     spec:
+      serviceAccountName: grafana
       containers:
         - name: grafana
           image: grafana/grafana:11.1.0
@@ -46,12 +66,41 @@ spec:
                   key: admin-password
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            - name: GF_USERS_DEFAULT_THEME
+              value: "light"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: /var/lib/grafana/dashboards/01-exec-overview.json
+            - name: GF_SECURITY_COOKIE_SAMESITE
+              value: lax
           readinessProbe:
             httpGet:
               path: /api/health
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10
+          volumeMounts:
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+      volumes:
+        - name: dashboards
+          configMap:
+            name: dark-noc-grafana-dashboards
+        - name: provisioning
+          configMap:
+            name: dark-noc-grafana-provisioning
+            items:
+              - key: dashboards.yaml
+                path: dashboards.yaml
+        - name: datasources
+          configMap:
+            name: dark-noc-grafana-provisioning
+            items:
+              - key: datasources.yaml
+                path: datasources.yaml
 ---
 apiVersion: v1
 kind: Service

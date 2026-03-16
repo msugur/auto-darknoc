@@ -1,0 +1,85 @@
+{
+  "id": null,
+  "uid": "darknoc-exec-overview",
+  "title": "Dark NOC Executive Overview",
+  "tags": ["dark-noc", "executive", "overview"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "style": "dark",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Running Pods (Core Namespaces)",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(kube_pod_status_phase{namespace=~\"dark-noc-.*|my-first-model\",phase=\"Running\"})", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 5}, {"color": "green", "value": 15}]}}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Service Availability (Hub Components)",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * avg(up{namespace=~\"dark-noc-hub|dark-noc-mcp|dark-noc-observability|dark-noc-ui\"})", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 90}, {"color": "green", "value": 98}]}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Pod Restarts (Last 1h)",
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[1h]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "CPU Usage (Cores)",
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=~\"dark-noc-.*|my-first-model\",container!=\"\",image!=\"\"}[5m]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "cores", "decimals": 2}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Namespace CPU Trend",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{namespace=~\"dark-noc-.*|my-first-model\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{namespace}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "cores"}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Namespace Memory Trend",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (namespace) (container_memory_working_set_bytes{namespace=~\"dark-noc-.*|my-first-model\",container!=\"\",image!=\"\"})", "legendFormat": "{{namespace}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "GPU Utilization (Avg %)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "avg(DCGM_FI_DEV_GPU_UTIL) or vector(0)", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Top Restarting Pods (24h)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "topk(15, sum by (namespace,pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[24h])))", "format": "table", "instant": true, "refId": "A"}]
+    }
+  ]
+}
