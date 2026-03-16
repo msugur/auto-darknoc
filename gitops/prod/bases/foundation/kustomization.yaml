@@ -2,7 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - hub-namespaces.yaml
-  - wave-0-certmanager-subscription.yaml
   - wave-0-gpu-operator-subscription.yaml
   - wave-0-nfd-subscription.yaml
   - wave-0-servicemesh-subscription.yaml
