@@ -14,6 +14,13 @@ spec:
   destination:
     name: edge-cluster
     namespace: openshift-logging
+  ignoreDifferences:
+    - group: observability.openshift.io
+      kind: ClusterLogForwarder
+      name: instance
+      namespace: openshift-logging
+      jsonPointers:
+        - /spec
   syncPolicy:
     automated:
       prune: true

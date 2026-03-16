@@ -14,6 +14,25 @@ spec:
   destination:
     name: in-cluster
     namespace: dark-noc-kafka
+  ignoreDifferences:
+    - group: build.openshift.io
+      kind: BuildConfig
+      name: pgvector-postgres
+      namespace: dark-noc-rag
+      jsonPointers:
+        - /spec/failedBuildsHistoryLimit
+        - /spec/successfulBuildsHistoryLimit
+        - /spec/nodeSelector
+        - /spec/postCommit
+        - /spec/resources
+        - /spec/runPolicy
+        - /spec/strategy/dockerStrategy
+    - group: postgresql.cnpg.io
+      kind: Cluster
+      name: pgvector-postgres
+      namespace: dark-noc-rag
+      jsonPointers:
+        - /spec
   syncPolicy:
     automated:
       prune: true

@@ -39,3 +39,7 @@ Then open Argo CD and sync `auto-darknoc-prod-root` (or keep autosync enabled).
 - Predeploy gate validates OCP version and scales hub worker MachineSet if configured.
 - Failed app sync sends summary to Slack `#demos`.
 - Successful full sync posts masked Access Center to Slack and sends masked email to `msugur@redhat.com`.
+
+## Executive observability pack
+- Grafana provisioning-as-code (datasource + dashboards) is included in GitOps.
+- Dashboard details: `gitops/prod/docs/OBSERVABILITY_DASHBOARDS.md`

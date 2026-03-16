@@ -14,6 +14,13 @@ spec:
   destination:
     name: in-cluster
     namespace: dark-noc-hub
+  ignoreDifferences:
+    - group: maistra.io
+      kind: ServiceMeshControlPlane
+      name: basic
+      namespace: istio-system
+      jsonPointers:
+        - /spec
   syncPolicy:
     automated:
       prune: true
