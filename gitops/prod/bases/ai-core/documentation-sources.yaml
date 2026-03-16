@@ -1,0 +1,125 @@
+version_pins:
+  openshift_container_platform: "4.21.3"
+  openshift_ai_operator: "3.3.0"
+  openshift_ai_self_managed_docs: "2.23"
+  amq_streams: "3.1.0"
+  acm: "2.15.1"
+  aap: "2.5.0"
+  openshift_logging: "6.4.2"
+  loki_operator: "6.4.2"
+  servicemesh: "3.1.0"
+  cloudnativepg: "1.28.1"
+  llamastack_server: "0.4.2.1+rhai0"
+
+sources:
+  - product: "OpenShift Container Platform"
+    version: "4.21"
+    vendor: "Red Hat"
+    category: "platform"
+    urls:
+      - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21"
+      - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/architecture/index"
+      - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/networking/index"
+
+  - product: "Red Hat OpenShift AI Self-Managed"
+    version: "2.23"
+    vendor: "Red Hat"
+    category: "ai"
+    urls:
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23/html/managing_resources"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23/html-single/working_with_distributed_workloads/index"
+
+  - product: "Red Hat Advanced Cluster Management for Kubernetes"
+    version: "2.15"
+    vendor: "Red Hat"
+    category: "multicluster"
+    urls:
+      - "https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.15"
+      - "https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.15/html-single/clusters/clusters"
+      - "https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.15/html-single/applications/applications"
+
+  - product: "Red Hat Ansible Automation Platform"
+    version: "2.5"
+    vendor: "Red Hat"
+    category: "automation"
+    urls:
+      - "https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5"
+      - "https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html-single/getting_started_with_automation_controller/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html-single/using_automation_decisions/index"
+
+  - product: "Red Hat Streams for Apache Kafka"
+    version: "3.1"
+    vendor: "Red Hat"
+    category: "streaming"
+    urls:
+      - "https://docs.redhat.com/en/documentation/red_hat_streams_for_apache_kafka/3.1"
+      - "https://docs.redhat.com/en/documentation/red_hat_streams_for_apache_kafka/3.1/html-single/streams_for_apache_kafka_on_openshift_overview/index"
+
+  - product: "Red Hat OpenShift Logging"
+    version: "6.4"
+    vendor: "Red Hat"
+    category: "observability"
+    urls:
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.4/html-single/configuring_logging/index"
+
+  - product: "OpenShift Service Mesh"
+    version: "3.1"
+    vendor: "Red Hat"
+    category: "networking"
+    urls:
+      - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/service_mesh"
+      - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/service_mesh/index"
+
+  - product: "Llama Stack (RHOAI runtime)"
+    version: "0.4.2.1+rhai0"
+    vendor: "Meta / Red Hat runtime"
+    category: "ai-agent"
+    urls:
+      - "https://llama-stack.readthedocs.io/en/latest/"
+      - "https://github.com/meta-llama/llama-stack"
+
+  - product: "CloudNativePG"
+    version: "1.28.1"
+    vendor: "CloudNativePG"
+    category: "database"
+    urls:
+      - "https://cloudnative-pg.io/documentation/1.28/"
+      - "https://cloudnative-pg.io/documentation/1.28/quickstart/"
+
+  - product: "pgvector"
+    version: "0.8.1"
+    vendor: "pgvector"
+    category: "database"
+    urls:
+      - "https://github.com/pgvector/pgvector"
+
+  - product: "LangGraph"
+    version: "1.0.0"
+    vendor: "LangChain"
+    category: "agent-framework"
+    urls:
+      - "https://langchain-ai.github.io/langgraph/"
+      - "https://github.com/langchain-ai/langgraph"
+
+  - product: "Langfuse"
+    version: "3.14.5"
+    vendor: "Langfuse"
+    category: "observability"
+    urls:
+      - "https://langfuse.com/docs"
+
+  - product: "vLLM"
+    version: "0.15.1"
+    vendor: "vLLM Project"
+    category: "inference"
+    urls:
+      - "https://docs.vllm.ai/"
+
+  - product: "FastMCP"
+    version: "3.0.2"
+    vendor: "jlowin"
+    category: "mcp"
+    urls:
+      - "https://gofastmcp.com/getting-started/welcome"

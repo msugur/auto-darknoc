@@ -5,3 +5,14 @@ resources:
   - hardware-profile.yaml
   - llamastack-distribution.yaml
   - rag-docs-seed-job.yaml
+configMapGenerator:
+  - name: rag-docs-seed-script
+    namespace: dark-noc-rag
+    files:
+      - seed-product-docs.py
+  - name: rag-docs-sources
+    namespace: dark-noc-rag
+    files:
+      - documentation-sources.yaml
+generatorOptions:
+  disableNameSuffixHash: true
