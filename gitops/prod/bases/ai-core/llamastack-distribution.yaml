@@ -31,7 +31,7 @@ spec:
         - name: POSTGRES_PORT
           value: "5432"
         - name: POSTGRES_DB
-          value: "langfuse"
+          value: "llamastack"
         - name: POSTGRES_USER
           value: "langfuse"
         - name: POSTGRES_PASSWORD
