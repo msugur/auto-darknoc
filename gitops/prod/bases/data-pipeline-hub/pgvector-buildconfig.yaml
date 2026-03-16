@@ -1,0 +1,55 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: pgvector-postgres
+  namespace: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: pgvector-postgres
+  namespace: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  source:
+    type: Dockerfile
+    dockerfile: |
+      FROM docker.io/library/postgres:16.4
+
+      RUN apt-get update && apt-get install -y \
+          build-essential \
+          git \
+          postgresql-server-dev-16 \
+          && rm -rf /var/lib/apt/lists/*
+
+      RUN git clone --branch v0.8.1 --depth 1 \
+          https://github.com/pgvector/pgvector.git /tmp/pgvector \
+          && cd /tmp/pgvector \
+          && make clean \
+          && make OPTFLAGS="" \
+          && make install \
+          && rm -rf /tmp/pgvector
+
+      RUN echo "CREATE EXTENSION IF NOT EXISTS vector;" \
+          > /docker-entrypoint-initdb.d/01-vector.sql
+
+      USER postgres
+
+  strategy:
+    type: Docker
+    dockerStrategy:
+      noCache: false
+
+  output:
+    to:
+      kind: ImageStreamTag
+      name: pgvector-postgres:16.4-v0.8.1
+
+  triggers:
+    - type: ConfigChange

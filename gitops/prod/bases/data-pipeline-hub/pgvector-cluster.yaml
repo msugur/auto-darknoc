@@ -46,7 +46,7 @@ spec:
   instances: 1
   # Custom image with pgvector 0.8.1 compiled in
   imageName: >-
-    ghcr.io/pgvector/pgvector:pg16
+    image-registry.openshift-image-registry.svc:5000/dark-noc-rag/pgvector-postgres:16.4-v0.8.1
 
   postgresql:
     shared_preload_libraries:
