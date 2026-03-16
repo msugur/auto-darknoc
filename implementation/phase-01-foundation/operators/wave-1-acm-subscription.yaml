@@ -1,0 +1,58 @@
+# =============================================================
+# Red Hat Advanced Cluster Management (ACM) 2.15 — Subscription
+# =============================================================
+# PURPOSE:
+#   ACM manages the hub→edge cluster relationship. Provides:
+#   - GitOps-driven configuration of edge cluster
+#   - ACM Argo CD Pull Agent (edge PULLS from hub — no inbound firewall)
+#   - Policy enforcement across both clusters
+#   - Topology view for demo visualization
+#
+# ACM 2.15 KEY FEATURES USED:
+#   - Argo CD Pull Agent: Edge cluster pulls manifests from hub
+#     Argo CD. No inbound connection from hub to edge required.
+#     Critical for real telco edge where firewalls block inbound.
+#   - Red Hat Edge Manager (TP): Fleet device management view
+#   - Fleet Virtualization: Unified VM + container view
+#   - ApplicationSet: Deploys same app across hub and edge
+#
+# TWO-STEP INSTALL:
+#   1. This file installs the ACM operator
+#   2. A separate MultiClusterHub CR (phase-04) activates it
+#   The MultiClusterHub MUST wait for operator CSV to Succeed.
+#
+# APPLY WITH:
+#   oc apply -f wave-1-acm-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n open-cluster-management | grep advanced-cluster
+#   # Wait for: advanced-cluster-management.v2.15.x   Succeeded
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: open-cluster-management
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: acm-operator-group
+  namespace: open-cluster-management
+spec: {}   # AllNamespaces — ACM manages cluster-scoped resources
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: advanced-cluster-management
+  namespace: open-cluster-management
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: release-2.15
+  installPlanApproval: Automatic
+  name: advanced-cluster-management
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

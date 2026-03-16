@@ -1,0 +1,78 @@
+# =============================================================
+# ServiceNow Mock — Deployment + Service + Route
+# =============================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicenow-mock
+  namespace: dark-noc-servicenow-mock
+  labels:
+    app: servicenow-mock
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: servicenow-mock
+  template:
+    metadata:
+      labels:
+        app: servicenow-mock
+    spec:
+      containers:
+        - name: servicenow-mock
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-servicenow-mock/servicenow-mock:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: API_KEY
+              value: "demo-api-key-2026"
+            - name: PORT
+              value: "8080"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicenow-mock
+  namespace: dark-noc-servicenow-mock
+  labels:
+    app: servicenow-mock
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selector:
+    app: servicenow-mock
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: servicenow-mock
+  namespace: dark-noc-servicenow-mock
+  labels:
+    app: servicenow-mock
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  to:
+    kind: Service
+    name: servicenow-mock
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

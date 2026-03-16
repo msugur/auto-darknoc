@@ -1,0 +1,124 @@
+# =============================================================
+# Kafka Topics — 5 KafkaTopic CRs for Dark NOC
+# =============================================================
+# PURPOSE:
+#   Defines all Kafka topics used by the Dark NOC pipeline.
+#   Using KafkaTopic CRs (vs manual mc/kafka-topics.sh) allows
+#   GitOps management — topics are recreated if deleted.
+#
+# TOPIC ARCHITECTURE:
+#
+#   nginx-logs        ← Edge Vector → Hub (raw nginx logs)
+#   noc-alerts        ← LangGraph agent → Notification services
+#   remediation-jobs  ← LangGraph agent → AAP EDA trigger
+#   agent-events      ← LangGraph agent → Dashboard websocket feed
+#   incident-audit    ← All components → Compliance audit trail
+#
+# DATA FLOW PER TOPIC:
+#   nginx-logs:
+#     Producer: Edge Vector (ClusterLogForwarder)
+#     Consumer: LangGraph agent (real-time analysis)
+#              Langfuse (trace correlation)
+#
+#   noc-alerts:
+#     Producer: LangGraph agent (when severity > warning)
+#     Consumer: Slack MCP server (notification)
+#              Dashboard (real-time alert display)
+#
+#   remediation-jobs:
+#     Producer: LangGraph agent (after root cause analysis)
+#     Consumer: EDA Controller (triggers Ansible job)
+#
+#   agent-events:
+#     Producer: LangGraph agent (each graph node transition)
+#     Consumer: React dashboard (live agent status stream)
+#
+#   incident-audit:
+#     Producer: All components (structured audit events)
+#     Consumer: LokiStack connector (long-term storage)
+#
+# APPLY WITH:
+#   oc apply -f kafka-topics.yaml -n dark-noc-kafka
+# =============================================================
+---
+# 1. nginx-logs — Raw log stream from edge nginx
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: nginx-logs
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  partitions: 3          # 3 partitions = parallel consumption by 3 consumers
+  replicas: 1            # Single-node cluster — no replication
+  config:
+    retention.ms: "604800000"      # 7 days retention
+    retention.bytes: "5368709120"  # 5 GB max per partition
+    cleanup.policy: delete         # Delete old segments (not compaction)
+    message.timestamp.type: LogAppendTime
+---
+# 2. noc-alerts — AI-generated alerts for Slack + Dashboard
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: noc-alerts
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "2592000000"     # 30 days — alerts kept longer for audit
+    cleanup.policy: delete
+---
+# 3. remediation-jobs — Ansible job triggers via EDA
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: remediation-jobs
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "86400000"       # 24 hours — job triggers are ephemeral
+    cleanup.policy: delete
+---
+# 4. agent-events — LangGraph node transitions for dashboard
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: agent-events
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "86400000"       # 24 hours — dashboard events ephemeral
+    cleanup.policy: delete
+---
+# 5. incident-audit — Compliance audit trail
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: incident-audit
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: "7776000000"     # 90 days — audit records kept longer
+    cleanup.policy: delete

@@ -1,0 +1,56 @@
+---
+- name: Restart nginx deployment on edge via Kubernetes API
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  vars:
+    edge_namespace: "{{ edge_namespace | default('dark-noc-edge') }}"
+    deployment: "{{ deployment | default('nginx') }}"
+    edge_api_url: "{{ edge_api_url | default('https://api.ocp.cgsdl.sandbox2776.opentlc.com:6443') }}"
+    edge_token: "{{ edge_token | default('') }}"
+
+  tasks:
+    - name: Ensure edge token is provided at launch
+      ansible.builtin.assert:
+        that:
+          - edge_token | length > 20
+        fail_msg: "Set edge_token in template extra vars when launching this job."
+
+    - name: Patch deployment annotation to trigger rollout restart
+      ansible.builtin.uri:
+        url: "{{ edge_api_url }}/apis/apps/v1/namespaces/{{ edge_namespace }}/deployments/{{ deployment }}"
+        method: PATCH
+        headers:
+          Authorization: "Bearer {{ edge_token }}"
+          Content-Type: "application/strategic-merge-patch+json"
+        body_format: json
+        body:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  kubectl.kubernetes.io/restartedAt: "{{ ansible_date_time.iso8601 }}"
+        validate_certs: false
+        status_code: [200]
+      register: restart_patch
+
+    - name: Wait for deployment generation to observe patch
+      ansible.builtin.uri:
+        url: "{{ edge_api_url }}/apis/apps/v1/namespaces/{{ edge_namespace }}/deployments/{{ deployment }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ edge_token }}"
+        validate_certs: false
+        status_code: [200]
+      register: deploy_status
+      retries: 24
+      delay: 5
+      until: >
+        (deploy_status.json.status.availableReplicas | default(0) | int) >= 1
+
+    - name: Report success
+      ansible.builtin.debug:
+        msg: >
+          Restart patch sent for {{ edge_namespace }}/{{ deployment }}.
+          availableReplicas={{ deploy_status.json.status.availableReplicas | default(0) }}

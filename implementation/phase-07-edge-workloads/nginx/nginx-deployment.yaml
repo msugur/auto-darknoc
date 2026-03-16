@@ -1,0 +1,196 @@
+# =============================================================
+# nginx Deployment — Edge Cluster Web Server
+# =============================================================
+# PURPOSE:
+#   Deploys nginx on the edge SNO cluster as the "telco edge
+#   web server" that the Dark NOC monitors. This nginx simulates
+#   a real-world edge network function (VNF/CNF web endpoint).
+#
+# WHAT MAKES IT DEMO-FRIENDLY:
+#   - JSON access log format → structured logs for AI analysis
+#   - /healthz endpoint → k8s liveness probe + external health check
+#   - /status endpoint → nginx stub_status for metrics
+#   - Configurable memory limit → easy to trigger OOMKilled
+#   - Small image (nginx:alpine) → fast startup for crash demos
+#
+# LOG FORMAT:
+#   nginx logs JSON to stdout/stderr (container logs):
+#   {"time":"...","request":"GET /","status":200,"bytes_sent":612,
+#    "request_time":0.001,"remote_addr":"10.128.x.x","host":"..."}
+#
+#   These JSON logs are picked up by Vector and forwarded to
+#   Hub Kafka via ClusterLogForwarder.
+#
+# APPLY WITH (on EDGE cluster):
+#   oc --context=${EDGE_CONTEXT} apply -f nginx-deployment.yaml \
+#     -n dark-noc-edge
+#
+# VERIFY:
+#   oc --context=${EDGE_CONTEXT} get pods -n dark-noc-edge
+#   oc --context=${EDGE_CONTEXT} get route nginx -n dark-noc-edge
+# =============================================================
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: dark-noc-edge
+  labels:
+    app: nginx
+    app.kubernetes.io/part-of: dark-noc
+data:
+  nginx.conf: |
+    worker_processes  auto;
+    error_log  /dev/stderr warn;
+    pid        /tmp/nginx.pid;
+
+    events {
+        worker_connections  256;
+    }
+
+    http {
+        # JSON access log format for structured log parsing
+        log_format json_combined escape=json
+          '{'
+            '"time":"$time_iso8601",'
+            '"request":"$request",'
+            '"status":"$status",'
+            '"bytes_sent":"$bytes_sent",'
+            '"request_time":"$request_time",'
+            '"remote_addr":"$remote_addr",'
+            '"host":"$host",'
+            '"upstream_response_time":"$upstream_response_time",'
+            '"http_user_agent":"$http_user_agent"'
+          '}';
+
+        access_log  /dev/stdout json_combined;
+        sendfile        on;
+        keepalive_timeout  65;
+
+        server {
+            listen       8080;    # Non-privileged port for OpenShift
+            server_name  localhost;
+
+            # Health check endpoint (k8s liveness/readiness)
+            location /healthz {
+                access_log off;
+                return 200 '{"status":"healthy","service":"dark-noc-nginx","version":"1.0"}';
+                add_header Content-Type application/json;
+            }
+
+            # nginx status endpoint (for metrics)
+            location /status {
+                stub_status on;
+                access_log off;
+            }
+
+            # Main content (simulates edge service endpoint)
+            location / {
+                root   /usr/share/nginx/html;
+                index  index.html;
+            }
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: dark-noc-edge
+  labels:
+    app: nginx
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: edge-workload
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: docker.io/library/nginx:1.27-alpine
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: logs
+              mountPath: /var/log/nginx
+            - name: cache
+              mountPath: /var/cache/nginx
+            - name: run
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi   # Intentionally small — can be reduced to trigger OOMKilled
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: logs
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: dark-noc-edge
+  labels:
+    app: nginx
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selector:
+    app: nginx
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nginx
+  namespace: dark-noc-edge
+  labels:
+    app: nginx
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  to:
+    kind: Service
+    name: nginx
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

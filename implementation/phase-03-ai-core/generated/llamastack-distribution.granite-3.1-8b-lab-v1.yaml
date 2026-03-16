@@ -1,0 +1,50 @@
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: dark-noc-llamastack
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+    dark-noc/model-profile: granite-3.1-8b-lab-v1
+  annotations:
+    dark-noc/model-id: "granite-3.1-8b-lab-v1"
+spec:
+  replicas: 1
+  network:
+    exposeRoute: true
+  server:
+    workers: 1
+    distribution:
+      name: "rh-dev"
+    containerSpec:
+      name: llamastack
+      port: 8321
+      env:
+        - name: POSTGRES_HOST
+          value: "langfuse-postgres-rw.dark-noc-observability.svc.cluster.local"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "postgres"
+        - name: POSTGRES_USER
+          value: "langfuse"
+        - name: POSTGRES_PASSWORD
+          value: "langfuse-pg-demo-2026"
+        - name: VLLM_URL
+          value: "http://granite-31-8b-lab-v1-predictor.dark-noc-hub.svc.cluster.local:8080/v1"
+        - name: VLLM_API_TOKEN
+          value: "fake"
+        - name: VLLM_EMBEDDING_URL
+          value: "http://granite-31-8b-lab-v1-predictor.dark-noc-hub.svc.cluster.local:8080/v1"
+        - name: VLLM_EMBEDDING_API_TOKEN
+          value: "fake"
+        - name: INFERENCE_MODEL
+          value: "granite-3.1-8b-lab-v1"
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi

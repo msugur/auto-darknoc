@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-grafana-dashboards
+  namespace: dark-noc-grafana
+data:
+  README.txt: |
+    Dashboard import targets:
+    - NVIDIA DCGM GPU utilization, memory, power, temperature
+    - LLM request rate and latency
+    - Token in/out throughput
+    - Incident remediation pipeline status

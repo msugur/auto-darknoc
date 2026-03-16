@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-model-binding
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/model-profile: granite-3.1-8b-lab-v1
+data:
+  MODEL_ID: "granite-3.1-8b-lab-v1"
+  VLLM_URL: "http://granite-31-8b-lab-v1-predictor.dark-noc-hub.svc:8080/v1"
+  MODEL_API_URL: "http://granite-31-8b-lab-v1-predictor.dark-noc-hub.svc:8080/v1/completions"
+  INFERENCE_SERVICE_NAME: "granite-31-8b-lab-v1"

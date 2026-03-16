@@ -1,0 +1,148 @@
+# =============================================================
+# Kafka KRaft Cluster — Single Node (Demo)
+# =============================================================
+# PURPOSE:
+#   Deploys a Kafka 4.x (via AMQ Streams 3.1) single-node cluster
+#   in KRaft mode. This is the real-time event streaming backbone
+#   that connects edge logs to the hub AI pipeline.
+#
+# KAFKA 3.1 / KAFKA 4.x KEY CHANGE — KRAFT MODE ONLY:
+#   ZooKeeper has been COMPLETELY REMOVED from Kafka 4.x.
+#   - No zookeeper: section needed or supported
+#   - Controller + Broker roles are combined in single pod
+#   - KRaft uses Raft consensus internally (no ZK quorum)
+#   - ~33% fewer pods vs Kafka 2.x / 3.x ZK mode
+#   The strimzi.io/kraft: enabled annotation activates KRaft.
+#
+# DEMO SIZING (single node):
+#   Production Kafka: 3+ brokers for HA
+#   Demo Kafka: 1 node — sufficient for demo log volumes
+#   One node means: no replication, no HA — acceptable for demo
+#
+# MESSAGE FLOW:
+#   Edge Vector → external route listener (TLS 9094) → nginx-logs topic
+#   → Hub Kafka consumer (Langfuse + LangGraph) → AI analysis
+#
+# STORAGE:
+#   50Gi gp3-csi PVC — stores ~7 days of demo logs
+#   With 7-day retention, old messages auto-deleted
+#
+# APPLY WITH:
+#   oc apply -f kafka-cluster.yaml -n dark-noc-kafka
+#
+# VERIFY:
+#   oc get kafka -n dark-noc-kafka
+#   oc get pods -n dark-noc-kafka
+#   # Expected: dark-noc-kafka-kafka-0 Running (1 pod — combined controller+broker)
+# =============================================================
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: dark-noc-kafka
+  namespace: dark-noc-kafka
+  annotations:
+    strimzi.io/kraft: enabled          # REQUIRED: enables KRaft mode (no ZooKeeper)
+    strimzi.io/node-pools: enabled     # Required with Kraft
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: streaming
+spec:
+  kafka:
+    version: "4.0.0"                   # Kafka 4.x via AMQ Streams 3.1
+    metadataVersion: "4.0-IV3"        # KRaft metadata version
+    replicas: 1                        # Single node for demo (no HA)
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: tls
+      - name: external
+        port: 9094
+        type: route
+        tls: true
+        configuration:
+          bootstrap:
+            annotations:
+              haproxy.router.openshift.io/timeout: 10m
+          brokers:
+            - broker: 0
+              annotations:
+                haproxy.router.openshift.io/timeout: 10m
+    config:
+      # Retention: 7 days for demo log storage
+      log.retention.hours: 168
+      log.retention.bytes: "10737418240"   # 10 GB per partition max
+      # Replication: single node, so all factors = 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      # Performance tuning for demo workloads
+      num.io.threads: 4
+      num.network.threads: 3
+      socket.send.buffer.bytes: 102400
+      socket.receive.buffer.bytes: 102400
+      socket.request.max.bytes: 104857600
+    storage:
+      type: persistent-claim
+      size: 50Gi
+      class: gp3-csi
+      deleteClaim: false
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+    # JVM tuning for demo — smaller heap than production
+    jvmOptions:
+      -Xms: 512m
+      -Xmx: 1g
+  # KRaft mode: entityOperator manages users + topics
+  entityOperator:
+    topicOperator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    userOperator:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+---
+# KafkaNodePool — defines controller+broker combined role (KRaft)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  namespace: dark-noc-kafka
+  labels:
+    strimzi.io/cluster: dark-noc-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  roles:
+    - controller    # KRaft controller (replaces ZooKeeper)
+    - broker        # Kafka broker (handles producer/consumer)
+  storage:
+    type: persistent-claim
+    size: 50Gi
+    class: gp3-csi
+    deleteClaim: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi

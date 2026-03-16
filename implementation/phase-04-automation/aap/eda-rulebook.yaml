@@ -1,0 +1,85 @@
+---
+# =============================================================
+# EDA Rulebook — Kafka-triggered fast-path remediations
+# =============================================================
+# PURPOSE:
+#   This Ansible Rulebook is uploaded to EDA Controller and
+#   watches the nginx-logs and remediation-jobs Kafka topics.
+#   Known simple failure patterns trigger immediate AAP jobs
+#   WITHOUT waiting for the AI agent.
+#
+# RULEBOOK LOGIC:
+#   Rule 1: OOMKilled → restart-nginx job
+#   Rule 2: CrashLoopBackOff (exit code 1) → check-and-fix job
+#   Rule 3: Agent-requested remediation → run-specific-playbook
+#
+# KAFKA SOURCE PLUGIN (AAP 2.5):
+#   Uses the built-in `ansible.eda.kafka` source plugin.
+#   Connects to Kafka bootstrap with SASL/TLS auth.
+#   Polls for new messages every 5 seconds.
+#
+# UPLOAD THIS FILE TO EDA:
+#   EDA UI → Rulebook Activations → New → Upload this file
+#   OR via REST API:
+#   POST /api/eda/v1/rulebooks/ with file content
+# =============================================================
+---
+- name: Dark NOC Fast-Path Remediations
+  hosts: all
+
+  sources:
+    - ansible.eda.kafka:
+        host: dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc
+        port: 9092
+        topic: nginx-logs
+        group_id: eda-fast-path
+        offset: latest
+
+    - ansible.eda.kafka:
+        host: dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc
+        port: 9092
+        topic: remediation-jobs
+        group_id: eda-remediation
+        offset: latest
+
+  rules:
+
+    # Rule 1: nginx OOMKilled → immediate restart
+    - name: Restart nginx on OOMKill
+      condition: >
+        event.message is search("OOMKilled", ignorecase=true) and
+        event.kubernetes.namespace_name == "dark-noc-edge"
+      action:
+        run_job_template:
+          name: "restart-nginx"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              namespace: "dark-noc-edge"
+              deployment: "nginx"
+              edge_cluster: "{{ event.labels.edge_site_id }}"
+
+    # Rule 2: nginx CrashLoopBackOff → config check + restart
+    - name: Fix nginx CrashLoop
+      condition: >
+        event.message is search("Back-off restarting failed container", ignorecase=true) and
+        event.kubernetes.labels.app == "nginx"
+      action:
+        run_job_template:
+          name: "nginx-crashloop-remediation"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              namespace: "dark-noc-edge"
+
+    # Rule 3: LangGraph agent-requested remediation
+    - name: Execute Agent-Requested Remediation
+      condition: >
+        event.source == "remediation-jobs" and
+        event.action is defined
+      action:
+        run_job_template:
+          name: "{{ event.job_template }}"
+          organization: "Default"
+          job_args:
+            extra_vars: "{{ event.extra_vars }}"

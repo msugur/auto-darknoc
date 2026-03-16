@@ -1,0 +1,45 @@
+# =============================================================
+# MinIO PersistentVolumeClaim — 200Gi gp3-csi
+# =============================================================
+# PURPOSE:
+#   MinIO is the on-cluster S3-compatible object store that
+#   replaces AWS S3. This PVC provides durable block storage
+#   for all 3 MinIO buckets:
+#     - rhoai-models     ← model weights for vLLM
+#     - loki-chunks      ← LokiStack log storage backend
+#     - langfuse-data    ← Langfuse blob attachments
+#
+# WHY 200Gi:
+#   - Granite 4.0 H-Tiny INT8: ~8 GB
+#   - LokiStack logs (30 days demo): ~20 GB
+#   - Langfuse traces + blobs: ~2 GB
+#   - Buffer for model cache and temp files: ~170 GB
+#   Total: 200 GB ensures we never run out during demo
+#
+# WHY gp3-csi:
+#   AWS gp3-csi StorageClass provides:
+#   - 3000 IOPS baseline (free tier — no extra cost)
+#   - 125 MB/s throughput (enough for model weight loading)
+#   - ReadWriteOnce access mode (MinIO runs as single pod)
+#   - CSI driver with volume expansion support
+#
+# APPLY WITH:
+#   oc apply -f minio-pvc.yaml -n dark-noc-minio
+# =============================================================
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3-csi
+  resources:
+    requests:
+      storage: 200Gi

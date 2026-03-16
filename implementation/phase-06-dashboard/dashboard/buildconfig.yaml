@@ -1,0 +1,48 @@
+---
+# =============================================================
+# Dark NOC Dashboard — ImageStream + Binary BuildConfig
+# =============================================================
+# PURPOSE:
+#   Provides a reproducible in-cluster build path for the React
+#   dashboard image used by deployment.yaml.
+#
+# USAGE:
+#   oc apply -f buildconfig.yaml -n dark-noc-ui
+#   oc start-build dark-noc-dashboard --from-dir=. --follow -n dark-noc-ui
+#
+# RUN FROM:
+#   implementation/phase-06-dashboard/dashboard/
+#
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: dark-noc-dashboard
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/name: dark-noc-dashboard
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: dark-noc-dashboard
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/name: dark-noc-dashboard
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  source:
+    type: Binary
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: dark-noc-dashboard:latest
+  runPolicy: Serial
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  triggers:
+    - type: ConfigChange

@@ -1,0 +1,135 @@
+# =============================================================
+# ClickHouse — Single-Shard Deployment for Langfuse 3.14.5
+# =============================================================
+# PURPOSE:
+#   ClickHouse is the OLAP (Online Analytical Processing) database
+#   used by Langfuse 3.14.5 for storing hot trace data.
+#   ClickHouse replaced the previous PostgreSQL-only approach in
+#   Langfuse 3.x for dramatically faster trace query performance.
+#
+# WHY CLICKHOUSE (vs PostgreSQL for traces):
+#   - Columnar storage: GROUP BY over millions of traces in <100ms
+#   - Per-trace storage: 10x cheaper than row-based PostgreSQL
+#   - Real-time aggregations: live P50/P95 latency dashboards
+#   - Langfuse 3.x REQUIRES ClickHouse — cannot use PG for traces
+#
+# LANGFUSE DATA SPLIT:
+#   PostgreSQL: User data, projects, prompts, evals metadata
+#   ClickHouse: Traces, spans, generations, scores (hot data)
+#   MinIO:      Blob uploads (large input/output attachments)
+#
+# SIZING (demo):
+#   Single shard, no replication — demo volumes (<1M traces)
+#   8Gi RAM limit to avoid OOM on startup/compaction
+#   20Gi PVC — sufficient for 1M traces at ~100 bytes/trace
+#
+# APPLY WITH:
+#   oc apply -f clickhouse-deployment.yaml -n dark-noc-observability
+#
+# VERIFY:
+#   oc exec -n dark-noc-observability deploy/clickhouse -- \
+#     clickhouse-client --query "SELECT version()"
+# =============================================================
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-data
+  namespace: dark-noc-observability
+  labels:
+    app: clickhouse
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3-csi
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse
+  namespace: dark-noc-observability
+  labels:
+    app: clickhouse
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+        - name: clickhouse
+          image: docker.io/clickhouse/clickhouse-server:24.8-alpine
+          env:
+            - name: CLICKHOUSE_DB
+              value: "langfuse"
+            - name: CLICKHOUSE_USER
+              value: "langfuse"
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+              value: "1"
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse-secrets
+                  key: CLICKHOUSE_PASSWORD
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: tcp
+              containerPort: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 8Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: clickhouse-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: dark-noc-observability
+  labels:
+    app: clickhouse
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: tcp
+      port: 9000
+      targetPort: 9000

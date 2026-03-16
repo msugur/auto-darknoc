@@ -1,0 +1,105 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: access-center-publish
+  namespace: dark-noc-gitops
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: publish
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              python /scripts/publish_access_center.py
+          envFrom:
+            - secretRef:
+                name: platform-credentials
+            - secretRef:
+                name: notification-credentials
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: access-center-scripts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: access-center-scripts
+  namespace: dark-noc-gitops
+data:
+  publish_access_center.py: |
+    import os, smtplib
+    from email.mime.text import MIMEText
+    import requests
+
+    def mask(v: str) -> str:
+      if not v:
+        return "<not-set>"
+      if len(v) <= 6:
+        return "***"
+      return v[:2] + "***" + v[-2:]
+
+    def line(k, v, secret=False):
+      return f"- {k}: {mask(v) if secret else (v or '<not-set>')}"
+
+    text = "\n".join([
+      "Dark NOC Access Center (masked)",
+      line("Hub Console", os.getenv("HUB_CONSOLE_URL")),
+      line("Hub API", os.getenv("HUB_API_URL")),
+      line("Edge Console", os.getenv("EDGE_CONSOLE_URL")),
+      line("Edge API", os.getenv("EDGE_API_URL")),
+      line("Dashboard", os.getenv("DASHBOARD_URL")),
+      line("Chatbot", os.getenv("CHATBOT_URL")),
+      line("Grafana", os.getenv("GRAFANA_URL")),
+      line("Langfuse", os.getenv("LANGFUSE_URL")),
+      line("AAP", os.getenv("AAP_URL")),
+      line("AAP Username", os.getenv("AAP_USERNAME")),
+      line("AAP Password", os.getenv("AAP_PASSWORD"), True),
+      line("ServiceNow", os.getenv("SERVICENOW_URL")),
+      line("ServiceNow Username", os.getenv("SERVICENOW_USERNAME")),
+      line("ServiceNow Password", os.getenv("SERVICENOW_PASSWORD"), True),
+      line("Slack Workspace", os.getenv("SLACK_WORKSPACE_URL")),
+      line("Slack Channel", os.getenv("SLACK_NOC_CHANNEL")),
+      line("Slack Bot Token", os.getenv("SLACK_BOT_TOKEN"), True),
+      line("Lightspeed Template", os.getenv("AAP_LIGHTSPEED_TEMPLATE")),
+    ])
+
+    slack_token = os.getenv("SLACK_BOT_TOKEN", "")
+    if slack_token:
+      try:
+        requests.post(
+          "https://slack.com/api/chat.postMessage",
+          headers={"Authorization": f"Bearer {slack_token}", "Content-Type": "application/json; charset=utf-8"},
+          json={"channel": os.getenv("SLACK_NOC_CHANNEL", "#demos"), "text": text},
+          timeout=15,
+        )
+      except Exception as e:
+        print("Slack publish failed", e)
+
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASSWORD", "")
+    recipient = os.getenv("NOTIFY_EMAIL", "msugur@redhat.com")
+    if smtp_host and smtp_user and smtp_pass:
+      try:
+        msg = MIMEText(text)
+        msg["Subject"] = "Dark NOC Access Center (masked)"
+        msg["From"] = smtp_user
+        msg["To"] = recipient
+        with smtplib.SMTP(smtp_host, int(os.getenv("SMTP_PORT", "587"))) as s:
+          s.starttls()
+          s.login(smtp_user, smtp_pass)
+          s.send_message(msg)
+      except Exception as e:
+        print("Email publish failed", e)
+
+    print(text)

@@ -1,0 +1,128 @@
+# =============================================================
+# vLLM InferenceService — Granite 4.0 H-Tiny on A10G
+# =============================================================
+# PURPOSE:
+#   Serves IBM Granite 4.0 H-Tiny via vLLM 0.15.1 on the GPU worker.
+#   Exposes an OpenAI-compatible REST API at:
+#   http://granite-vllm.dark-noc-hub.svc:8080/v1
+#
+# MODEL DETAILS:
+#   IBM Granite 4.0 H-Tiny (Hybrid-Architecture)
+#   - Architecture: Hybrid Mamba-2 (SSM) + MoE Transformer
+#   - Total parameters: 7B | Active parameters: ~1B (MoE)
+#   - Training: 12T tokens, 128K context window
+#   - Quantization: INT8 via vLLM (fits in A10G 24GB VRAM)
+#   - Capabilities: JSON structured output, tool calling, RAG
+#   - Tool parser: --tool-call-parser=granite (vLLM 0.15.1+)
+#
+# vLLM 0.15.1 KEY FLAGS:
+#   --enable-auto-tool-choice: enables tool call parsing
+#   --tool-call-parser=granite: Granite-specific tool format
+#   --enable-prefix-caching: speeds up repeated system prompts
+#   --max-model-len=8192: limits context for demo (saves VRAM)
+#   --guided-decoding-backend=xgrammar: structured JSON output (GA)
+#
+# STRUCTURED OUTPUTS (xgrammar):
+#   vLLM enforces JSON schema for structured outputs.
+#   The LangGraph agent uses:
+#     response_format={"type": "json_schema", "json_schema": {...}}
+#   This GUARANTEES valid JSON — no free-text parsing needed.
+#
+# APPLY WITH:
+#   oc apply -f vllm-inferenceservice.yaml -n dark-noc-hub
+#
+# VERIFY:
+#   oc get inferenceservice granite-vllm -n dark-noc-hub
+#   # Test inference:
+#   curl http://granite-vllm-predictor.dark-noc-hub.svc/v1/models
+# =============================================================
+---
+# ServingRuntime — vLLM 0.15.1 template for RHOAI 3.3
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+  annotations:
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+spec:
+  builtInAdapter:
+    serverType: ovms
+  containers:
+    - name: kserve-container
+      image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.2.4
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--served-model-name=$(MODEL_NAME)"
+        - "--dtype=half"
+        - "--max-model-len=8192"
+        - "--gpu-memory-utilization=0.95"
+      env:
+        - name: MODEL_NAME
+          value: "granite-4-h-tiny"
+        - name: HF_HOME
+          value: "/tmp/hf_home"
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        requests:
+          cpu: "4"
+          memory: "12Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "24Gi"
+          nvidia.com/gpu: "1"
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      version: "0.15.1"
+      autoSelect: true
+---
+# InferenceService — deploys Granite H-Tiny on the ServingRuntime
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite-vllm
+  namespace: dark-noc-hub
+  labels:
+    app: granite-vllm
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment    # NOT Serverless
+    serving.kserve.io/autoscalerClass: external         # KEDA (if enabled)
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-runtime
+      # Temporary bootstrap model source for this environment.
+      # Replace with granite S3 URI after model artifacts are mirrored to MinIO.
+      storageUri: "oci://quay.io/redhat-ai-services/modelcar-catalog:llama-3.2-3b-instruct"
+    # GPU scheduling via Hardware Profile
+    nodeSelector:
+      dark-noc/gpu-worker: "true"
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+    minReplicas: 1
+    maxReplicas: 1    # Single GPU — no scale-out for demo

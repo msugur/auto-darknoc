@@ -1,0 +1,105 @@
+# =============================================================
+# OpenShift Service Mesh 3.x — Operator Subscription
+# =============================================================
+# PURPOSE:
+#   Service Mesh provides mTLS between all Dark NOC microservices,
+#   traffic management, and distributed tracing. RHOAI 3.3 uses
+#   Service Mesh for model serving network policies and gateway
+#   routing of inference traffic.
+#
+# ARCHITECTURE:
+#   Service Mesh 3.x is based on Istio Ambient Mesh (no sidecars).
+#   This removes the need to inject sidecar containers into every
+#   pod — ambient mode uses per-node ztunnel proxies instead.
+#   This is ~40% lower overhead than sidecar mode.
+#
+# WHY WAVE 0:
+#   RHOAI 3.3 operator checks for Service Mesh CRDs at install.
+#   Must be installed before RHOAI or model serving webhooks fail.
+#
+# COMPONENTS INSTALLED:
+#   - istiod (control plane)
+#   - ztunnel (per-node L4 proxy — ambient mode)
+#   - Kiali (service mesh observability)
+#   - Jaeger (distributed tracing — optional for demo)
+#
+# APPLY WITH:
+#   oc apply -f wave-0-servicemesh-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n openshift-operators | grep servicemesh
+#   oc get pods -n istio-system
+# =============================================================
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: servicemeshoperator
+  namespace: openshift-operators  # Service Mesh uses AllNamespaces install
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: servicemeshoperator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+# Kiali Operator — Service Mesh observability console
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: kiali-ossm
+  namespace: openshift-operators
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: kiali-ossm
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+# ServiceMeshControlPlane — activates Istio control plane
+# Apply AFTER both CSVs reach Succeeded state
+# NOTE: Namespace istio-system is auto-created by the CR
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic
+  namespace: istio-system
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  version: v2.6
+  tracing:
+    type: None         # Skip Jaeger for demo — reduces resource use
+  addons:
+    kiali:
+      enabled: true
+    prometheus:
+      enabled: false   # Use existing Prometheus from cluster monitoring
+  proxy:
+    resources:
+      requests:
+        cpu: 10m       # Minimal resources for demo
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 128Mi
+---
+# ServiceMeshMemberRoll — enrolls namespaces in the mesh
+# Add dark-noc namespaces that need mTLS
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+  name: default
+  namespace: istio-system
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  members:
+    - dark-noc-hub
+    - dark-noc-mcp
+    - dark-noc-kafka
+    - dark-noc-observability

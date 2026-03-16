@@ -1,0 +1,104 @@
+# =============================================================
+# pgvector — BuildConfig for Custom PostgreSQL 16 + pgvector Image
+# =============================================================
+# PURPOSE:
+#   Builds a custom PostgreSQL 16 image with the pgvector 0.8.1
+#   extension compiled and installed. This image is used by the
+#   pgvector CloudNativePG cluster for RAG knowledge base storage.
+#
+# WHY CUSTOM IMAGE:
+#   Standard PostgreSQL images don't include pgvector. We must:
+#   1. Start from the official PG16 image
+#   2. Install build tools (gcc, make, git)
+#   3. Clone pgvector 0.8.1 from GitHub
+#   4. Compile: make && make install
+#   5. Push to internal OpenShift registry
+#
+# pgvector 0.8.1 CAPABILITIES:
+#   - HNSW index: Approximate nearest neighbor search
+#     <-> (cosine distance), <#> (inner product), <+> (L2)
+#   - Iterative index scans (new in 0.7+): better recall
+#   - Supports up to 2000 dimensions (MiniLM-L6: 384-dim)
+#   - Exact K-NN via sequential scan for small datasets
+#
+# RAG USE CASE:
+#   NOC runbooks are chunked → embedded (MiniLM-L6-v2) →
+#   stored as vector(384) in noc_rag database.
+#   LangGraph agent queries: SELECT * FROM documents
+#     ORDER BY embedding <-> $query_vector LIMIT 5
+#
+# APPLY WITH:
+#   oc apply -f pgvector-buildconfig.yaml -n dark-noc-rag
+#   oc start-build pgvector-postgres --follow -n dark-noc-rag
+#
+# VERIFY:
+#   oc get build -n dark-noc-rag
+#   oc get imagestream pgvector-postgres -n dark-noc-rag
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: pgvector-postgres
+  namespace: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: pgvector-postgres
+  namespace: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  source:
+    type: Dockerfile
+    dockerfile: |
+      FROM docker.io/library/postgres:16.4
+
+      # Install build dependencies
+      RUN apt-get update && apt-get install -y \
+          build-essential \
+          git \
+          postgresql-server-dev-16 \
+          && rm -rf /var/lib/apt/lists/*
+
+      # Build pgvector 0.8.1
+      RUN git clone --branch v0.8.1 --depth 1 \
+          https://github.com/pgvector/pgvector.git /tmp/pgvector \
+          && cd /tmp/pgvector \
+          && make clean \
+          && make OPTFLAGS="" \
+          && make install \
+          && rm -rf /tmp/pgvector
+
+      # Auto-create vector extension on database init
+      RUN echo "CREATE EXTENSION IF NOT EXISTS vector;" \
+          > /docker-entrypoint-initdb.d/01-vector.sql
+
+      USER postgres
+
+  strategy:
+    type: Docker
+    dockerStrategy:
+      noCache: false
+
+  output:
+    to:
+      kind: ImageStreamTag
+      name: pgvector-postgres:16.4-v0.8.1
+
+  triggers:
+    - type: ConfigChange   # Auto-rebuild if BuildConfig changes

@@ -1,0 +1,30 @@
+---
+# Edge EDA rulebook (edge-01)
+# Fast local remediation for known-safe patterns.
+# Uses webhook source for deterministic edge-local trigger.
+- name: Edge-01 local fast-path remediation
+  hosts: localhost
+
+  sources:
+    - ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+
+  rules:
+    - name: Restart nginx if OOMKilled detected
+      condition: >
+        event.payload.failure_type is search("OOMKilled", ignorecase=true) and
+        event.payload.namespace == "dark-noc-edge"
+      action:
+        run_playbook:
+          name: /runner/project/restart-nginx.yaml
+          extra_vars:
+            namespace: "{{ event.payload.namespace }}"
+            deployment: "{{ event.payload.deployment }}"
+            edge_cluster: edge-01
+
+    - name: Publish remediation event to hub topic
+      condition: event.meta.rule is defined
+      action:
+        debug:
+          msg: "edge-01 local remediation triggered by rule={{ event.meta.rule }}"

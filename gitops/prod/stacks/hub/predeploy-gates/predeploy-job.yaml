@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: predeploy-gate
+  namespace: dark-noc-gitops
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: predeploy-gate
+      containers:
+        - name: gate
+          image: quay.io/openshift/origin-cli:4.21
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              CURRENT=$(oc get clusterversion version -o jsonpath='{.status.desired.version}')
+              echo "Cluster version: ${CURRENT}"
+              if [[ "${CURRENT}" != "4.21.3" ]]; then
+                echo "Expected OCP 4.21.3 before deployment"
+                exit 1
+              fi
+              if [[ -n "${HUB_CPU_MACHINESET:-}" ]]; then
+                TARGET="${HUB_CPU_REPLICAS:-1}"
+                echo "Scaling ${HUB_CPU_MACHINESET} to ${TARGET}"
+                oc -n openshift-machine-api scale machineset "${HUB_CPU_MACHINESET}" --replicas="${TARGET}"
+              else
+                echo "HUB_CPU_MACHINESET not set; skipping scale"
+              fi
+          env:
+            - name: HUB_CPU_MACHINESET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-credentials
+                  key: HUB_CPU_MACHINESET
+                  optional: true
+            - name: HUB_CPU_REPLICAS
+              valueFrom:
+                secretKeyRef:
+                  name: platform-credentials
+                  key: HUB_CPU_REPLICAS
+                  optional: true

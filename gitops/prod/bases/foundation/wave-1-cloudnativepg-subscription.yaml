@@ -1,0 +1,69 @@
+# =============================================================
+# CloudNativePG — Operator Subscription
+# =============================================================
+# PURPOSE:
+#   CloudNativePG manages PostgreSQL clusters as Kubernetes
+#   CRDs. Used for TWO separate PostgreSQL clusters:
+#   1. Langfuse metadata DB (dark-noc-observability namespace)
+#   2. pgvector RAG database (dark-noc-rag namespace)
+#
+# WHY CLOUDNATIVEPG:
+#   - Native Kubernetes operator (no VM-based Postgres)
+#   - Automatic failover, backup to S3/MinIO
+#   - Built-in connection pooling via PgBouncer
+#   - Supported by community + enterprise editions
+#   - Works with OperatorHub in OpenShift
+#
+# POSTGRES CLUSTERS MANAGED:
+#   langfuse-postgres:
+#     - 1 instance (demo — no HA needed)
+#     - 10Gi PVC
+#     - DB: langfuse, User: langfuse
+#     - Used by: Langfuse web + ClickHouse metadata
+#
+#   pgvector-postgres:
+#     - 1 instance with pgvector 0.8.1 extension
+#     - 20Gi PVC
+#     - DB: noc_rag, User: noc_agent
+#     - Used by: LangGraph agent for RAG knowledge base
+#     - Extension: vector (HNSW index for ANN search)
+#
+# NOTE: pgvector requires a custom PostgreSQL image with the
+#   pgvector extension compiled in. See pgvector-buildconfig.yaml
+#   in phase-02-data-pipeline for the image build.
+#
+# APPLY WITH:
+#   oc apply -f wave-1-cloudnativepg-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n cnpg-system | grep cloudnative-pg
+#   oc get crd clusters.postgresql.cnpg.io
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpg-system
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: cnpg-operator-group
+  namespace: cnpg-system
+spec: {}   # AllNamespaces — manages clusters in any namespace
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cloudnative-pg
+  namespace: cnpg-system
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable-v1
+  installPlanApproval: Automatic
+  name: cloudnative-pg
+  source: certified-operators
+  sourceNamespace: openshift-marketplace

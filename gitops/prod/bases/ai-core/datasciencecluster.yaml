@@ -1,0 +1,101 @@
+# =============================================================
+# DataScienceCluster — Activates RHOAI 3.3 Components
+# =============================================================
+# PURPOSE:
+#   The DataScienceCluster CR is the master switch for RHOAI 3.3.
+#   It controls which RHOAI components are enabled/disabled.
+#   Apply this AFTER the RHOAI operator CSV is Succeeded.
+#
+# RHOAI 3.3 BREAKING CHANGES FROM 2.x:
+#   - ModelServing: Serverless (KNative) is DEPRECATED.
+#     Use KServe RawDeployment mode instead.
+#     Set: kserve.managementState: Managed (not serverless)
+#   - Accelerator Profiles RENAMED to Hardware Profiles
+#   - TGIS runtime REMOVED — use vLLM exclusively
+#   - AI Pipelines (renamed from Data Science Pipelines)
+#   - LlamaStack Operator is NEW in 3.3 (not in 2.x)
+#
+# COMPONENTS ENABLED:
+#   - Dashboard:          RHOAI Web console
+#   - Workbenches:        JupyterLab environments
+#   - ModelController:    KServe controller
+#   - Kserve:             Model serving (RawDeployment mode)
+#   - ModelRegistry:      Model catalog backed by MinIO
+#   - DataSciencePipelines: AI workflow pipelines (formerly DS Pipelines)
+#   - LlamaStack:         NEW in 3.3 — agent framework
+#
+# COMPONENTS DISABLED (to save resources):
+#   - TrustyAI:           AI fairness/bias (not needed for demo)
+#   - Ray:                Distributed training (not needed for demo)
+#   - CodeFlare:          ML cluster management (not needed)
+#
+# APPLY WITH:
+#   oc apply -f datasciencecluster.yaml
+#
+# VERIFY:
+#   oc get datasciencecluster
+#   oc get pods -n redhat-ods-applications
+#   oc get route rhods-dashboard -n redhat-ods-applications
+# =============================================================
+---
+apiVersion: datasciencecluster.opendatahub.io/v1
+kind: DataScienceCluster
+metadata:
+  name: default-dsc
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  components:
+    # RHOAI Dashboard — web console for data scientists
+    dashboard:
+      managementState: Managed
+
+    # Workbenches — JupyterLab for exploration and testing
+    workbenches:
+      managementState: Managed
+
+    # Model Controller — manages InferenceService CRs
+    modelcontroller:
+      managementState: Managed
+
+    # KServe — model serving with RawDeployment (NOT Serverless)
+    kserve:
+      managementState: Managed
+      serving:
+        managementState: Managed
+        name: kserve
+        # RawDeployment: standard k8s Deployment + Service
+        # No KNative/Serverless dependencies required
+        ingressGateway:
+          certificate:
+            type: SelfSigned    # Use cert-manager self-signed for demo
+
+    # ModelRegistry — model catalog backed by MinIO
+    modelregistry:
+      managementState: Managed
+      registriesNamespace: "rhoai-model-registries"
+
+    # Data Science Pipelines (formerly AI Pipelines in 2.x)
+    datasciencepipelines:
+      managementState: Managed
+
+    # LlamaStack — NEW in RHOAI 3.3 — agent framework
+    llamastack:
+      managementState: Managed
+
+    # --- DISABLED for demo resource efficiency ---
+    # TrustyAI — AI bias/fairness monitoring
+    trustyai:
+      managementState: Removed
+
+    # Ray — distributed training cluster
+    ray:
+      managementState: Removed
+
+    # CodeFlare — ML cluster management
+    codeflare:
+      managementState: Removed
+
+    # Trainium/Inferentia — AWS specialized accelerators
+    trainingoperator:
+      managementState: Removed

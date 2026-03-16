@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-model-binding
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+data:
+  MODEL_ID: "granite-4-h-tiny"
+  VLLM_URL: "http://granite-vllm-predictor.dark-noc-hub.svc:8080/v1"
+  MODEL_API_URL: "http://granite-vllm-predictor.dark-noc-hub.svc:8080/v1/completions"
+  INFERENCE_SERVICE_NAME: "granite-vllm"

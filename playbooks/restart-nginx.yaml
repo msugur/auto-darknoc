@@ -1,0 +1,122 @@
+---
+# =============================================================
+# Ansible Playbook: Restart nginx on Edge Cluster
+# =============================================================
+# PURPOSE:
+#   Safely restarts the nginx deployment on the edge cluster.
+#   Used for: OOMKilled, unhealthy pod, hung process.
+#   Uses kubectl_apply via the k8s Ansible collection.
+#
+# TRIGGER SOURCES:
+#   1. EDA Controller (Kafka nginx-logs topic match)
+#   2. LangGraph agent via AAP MCP server REST API call
+#   3. Manual via AAP UI → Job Templates → restart-nginx
+#
+# VARIABLES (passed from EDA or agent):
+#   namespace:   Target namespace (default: dark-noc-edge)
+#   deployment:  Deployment name (default: nginx)
+#   edge_cluster: Site ID for reporting (default: edge-01)
+#
+# REQUIREMENTS:
+#   - Ansible collection: kubernetes.core
+#   - AAP credential: edge-01-k8s (OpenShift/Kubernetes bearer token)
+#     or edge-01-kubeconfig (legacy)
+# =============================================================
+- name: Restart nginx on Edge Cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    namespace: "dark-noc-edge"
+    deployment: "nginx"
+    edge_cluster: "edge-01"
+    kubeconfig: "{{ lookup('env', 'KUBECONFIG') | default('', true) }}"
+    k8s_auth_host: "{{ lookup('env', 'K8S_AUTH_HOST') | default('', true) }}"
+    k8s_auth_api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default('', true) }}"
+    k8s_validate_certs: "{{ (lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('false', true)) | bool }}"
+
+  tasks:
+    - name: Validate Kubernetes auth inputs
+      assert:
+        that:
+          - kubeconfig | length > 0 or (k8s_auth_host | length > 0 and k8s_auth_api_key | length > 0)
+        fail_msg: >
+          Missing Kubernetes auth. Provide either KUBECONFIG (legacy credential)
+          or K8S_AUTH_HOST + K8S_AUTH_API_KEY (AAP Kubernetes bearer token credential).
+
+    - name: "{{ edge_cluster }}: Check nginx deployment state before restart"
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: "{{ deployment }}"
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
+        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
+        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
+        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
+      register: nginx_before
+      failed_when: nginx_before.resources | length == 0
+
+    - name: "Log pre-restart status"
+      debug:
+        msg: >
+          Deployment {{ deployment }} in {{ namespace }}:
+          desired={{ nginx_before.resources[0].spec.replicas }},
+          ready={{ nginx_before.resources[0].status.readyReplicas | default(0) }}
+
+    - name: "{{ edge_cluster }}: Restart nginx via rollout"
+      kubernetes.core.k8s:
+        state: patched
+        kind: Deployment
+        name: "{{ deployment }}"
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
+        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
+        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
+        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
+        definition:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  kubectl.kubernetes.io/restartedAt: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
+
+    - name: "{{ edge_cluster }}: Wait for nginx rollout to complete"
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: "{{ deployment }}"
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
+        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
+        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
+        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
+      register: nginx_after
+      retries: 24
+      delay: 5
+      until: >
+        (nginx_after.resources | length > 0) and
+        ((nginx_after.resources[0].status.readyReplicas | default(0) | int) >=
+         (nginx_after.resources[0].spec.replicas | default(1) | int))
+
+    - name: "{{ edge_cluster }}: Verify nginx pod is Running"
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ namespace }}"
+        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
+        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
+        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
+        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
+        label_selectors:
+          - app=nginx
+      register: nginx_pods
+      retries: 12
+      delay: 10
+      until: >
+        nginx_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
+
+    - name: "Report remediation success"
+      debug:
+        msg: >
+          ✅ nginx restart complete on {{ edge_cluster }}.
+          Pod status: {{ nginx_pods.resources[0].status.phase }}
+          Timestamp: {{ lookup('pipe', 'date -u +%FT%TZ') }}

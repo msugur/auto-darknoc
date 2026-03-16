@@ -1,0 +1,71 @@
+# =============================================================
+# LokiStack — Log Storage Backend (Hub Cluster)
+# =============================================================
+# PURPOSE:
+#   LokiStack provides long-term log storage for the Dark NOC hub.
+#   All logs (cluster-level + edge nginx logs forwarded via Kafka)
+#   are stored in LokiStack backed by MinIO object storage.
+#   The LokiStack MCP server queries LokiStack for historical logs.
+#
+# LOKI ARCHITECTURE:
+#   Distributor → Ingester → Querier → MinIO (loki-chunks bucket)
+#   Components communicate via gRPC (managed by operator)
+#
+# SIZE (1x.demo):
+#   Lowest footprint preset for heavily constrained sandbox clusters.
+#   Preferred on SNO hub setups where cpu/pod slots are tight.
+#   NOT suitable for production telco (use 1x.medium+)
+#
+# MINIO BACKEND:
+#   LokiStack stores chunks in MinIO loki-chunks bucket.
+#   Authentication via minio-loki-secret (created below).
+#   Internal endpoint: http://minio.dark-noc-minio.svc:9000
+#
+# LOG QUERY (LogQL):
+#   LokiStack MCP server queries via:
+#   {namespace="dark-noc-edge", app="nginx"} |= "error"
+#   This gives the LangGraph agent historical log context.
+#
+# APPLY WITH:
+#   oc apply -f lokistack-hub.yaml -n openshift-logging
+#
+# VERIFY:
+#   oc get lokistack -n openshift-logging
+#   oc get pods -n openshift-logging -l app.kubernetes.io/name=loki
+# =============================================================
+---
+# Secret for MinIO access (LokiStack uses S3 API)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-loki-secret
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  access_key_id: "admin"
+  access_key_secret: "darknoc-minio-secret"    # Match minio-secret
+  bucketnames: "loki-chunks"
+  endpoint: "http://minio.dark-noc-minio.svc:9000"
+  region: "us-east-1"    # MinIO ignores region but requires the field
+---
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: logging-loki
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  size: 1x.demo    # Lowest resource footprint for sandbox hubs
+  storage:
+    schemas:
+      - version: v13
+        effectiveDate: "2024-10-01"
+    secret:
+      name: minio-loki-secret
+      type: s3
+  storageClassName: gp3-csi
+  tenants:
+    mode: openshift-logging    # Integrates with OpenShift RBAC for log access

@@ -1,0 +1,98 @@
+# =============================================================
+# NVIDIA GPU Operator — Subscription + ClusterPolicy
+# =============================================================
+# PURPOSE:
+#   Installs NVIDIA drivers, CUDA toolkit, device plugin, and
+#   DCGM exporter on every node that has a GPU (detected by NFD).
+#   Without this, Kubernetes has no visibility into GPU resources
+#   and vLLM cannot schedule on the GPU node.
+#
+# WHAT IT INSTALLS (as DaemonSets on GPU nodes):
+#   - nvidia-driver-daemonset     ← installs NVIDIA kernel driver
+#   - nvidia-container-toolkit    ← runtime hook for GPU containers
+#   - nvidia-device-plugin        ← exposes nvidia.com/gpu resource
+#   - nvidia-dcgm-exporter        ← GPU metrics for Prometheus
+#   - nvidia-mig-manager          ← MIG (not used in this demo)
+#   - nvidia-node-status-exporter ← node GPU health reporting
+#
+# AFTER INSTALL, GPU NODE SHOWS:
+#   oc get node <gpu-node> -o json | jq '.status.allocatable'
+#   "nvidia.com/gpu": "1"   ← schedulable GPU resource appears
+#
+# TIMING: GPU Operator takes 5-10 minutes to fully initialize
+#   on a new node. The CUDA toolkit installation involves
+#   compiling the kernel module, which takes time.
+#
+# APPLY WITH:
+#   oc apply -f wave-0-gpu-operator-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n nvidia-gpu-operator
+#   oc get pods -n nvidia-gpu-operator
+#   oc get node <gpu-node> -o jsonpath='{.status.allocatable.nvidia\.com/gpu}'
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nvidia-gpu-operator
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    openshift.io/cluster-monitoring: "true"
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: gpu-operator-group
+  namespace: nvidia-gpu-operator
+spec:
+  targetNamespaces:
+    - nvidia-gpu-operator
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: gpu-operator-certified
+  namespace: nvidia-gpu-operator
+spec:
+  channel: v25.3             # Latest stable as of early 2026
+  installPlanApproval: Automatic
+  name: gpu-operator-certified
+  source: certified-operators
+  sourceNamespace: openshift-marketplace
+---
+# ClusterPolicy — Activates all GPU Operator components
+# Apply AFTER the CSV reaches Succeeded state
+apiVersion: nvidia.com/v1
+kind: ClusterPolicy
+metadata:
+  name: gpu-cluster-policy
+  namespace: nvidia-gpu-operator
+spec:
+  operator:
+    defaultRuntime: crio       # OpenShift uses CRI-O
+  driver:
+    enabled: true
+    useNvidiaDriverCRD: true
+    upgradePolicy:
+      autoUpgrade: true
+  toolkit:
+    enabled: true
+  devicePlugin:
+    enabled: true
+    config:
+      name: time-slicing-config    # Optional: allows GPU time-slicing for demo
+      default: "any"
+  dcgmExporter:
+    enabled: true
+    config:
+      name: ""
+  mig:
+    strategy: none               # No MIG for demo — single full GPU
+  nodeStatusExporter:
+    enabled: true
+  validator:
+    plugin:
+      env:
+        - name: WITH_WORKLOAD
+          value: "false"         # Skip validation workload for faster init

@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - hub-namespaces.yaml
+  - wave-0-certmanager-subscription.yaml
+  - wave-0-gpu-operator-subscription.yaml
+  - wave-0-nfd-subscription.yaml
+  - wave-0-servicemesh-subscription.yaml
+  - wave-1-aap-subscription.yaml
+  - wave-1-acm-subscription.yaml
+  - wave-1-cloudnativepg-subscription.yaml
+  - wave-1-kafka-subscription.yaml
+  - wave-1-logging-subscription.yaml
+  - wave-1-loki-subscription.yaml
+  - wave-1-rhoai-subscription.yaml

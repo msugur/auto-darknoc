@@ -1,0 +1,44 @@
+# =============================================================
+# MultiClusterHub — ACM 2.15 Control Plane
+# =============================================================
+# PURPOSE:
+#   Activates Red Hat ACM 2.15 on the Hub cluster.
+#   MultiClusterHub is the top-level CR that deploys:
+#   - Cluster Hub (cluster registration, inventory)
+#   - Argo CD via OpenShift GitOps (hub-side)
+#   - Argo CD Pull Agent (edge-side — for edge GitOps)
+#   - Policy framework (compliance enforcement)
+#   - Application Lifecycle Management
+#
+# ACM 2.15 KEY FEATURE: Argo CD Pull Agent
+#   Traditional GitOps: Hub Argo CD pushes to Edge (needs inbound)
+#   ACM Pull Agent:     Edge Argo CD PULLS from Hub Git repo (no inbound)
+#   This is critical for real telco edge networks where hub→edge
+#   firewall ports are blocked (security requirement).
+#
+# TIMING:
+#   MultiClusterHub takes 10-15 minutes to fully initialize.
+#   All sub-components (Hive, Search, Observability) start sequentially.
+#
+# APPLY WITH:
+#   oc apply -f multiclusterhub.yaml -n open-cluster-management
+#
+# VERIFY:
+#   oc get multiclusterhub -n open-cluster-management
+#   # Wait for: Status: Running
+#   oc get route multicloud-console -n open-cluster-management
+# =============================================================
+---
+apiVersion: operator.open-cluster-management.io/v1
+kind: MultiClusterHub
+metadata:
+  name: multiclusterhub
+  namespace: open-cluster-management
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  # Argo CD Pull Agent for edge GitOps (ACM 2.15 feature)
+  availabilityConfig: Basic   # Basic = single replica (demo)
+  # Note: availabilityConfig: High = HA mode for production
+
+  disableHubSelfManagement: false   # Hub also manages itself as a cluster

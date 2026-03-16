@@ -1,0 +1,50 @@
+# =============================================================
+# Red Hat Streams for Apache Kafka 3.1 — Operator Subscription
+# =============================================================
+# PURPOSE:
+#   Installs the Streams for Kafka operator (based on Strimzi)
+#   which manages the KRaft Kafka cluster — the message
+#   streaming backbone of the Dark NOC.
+#
+# WHY STREAMS FOR KAFKA 3.1:
+#   - Kafka 4.x base — ZooKeeper COMPLETELY REMOVED (KRaft only)
+#   - Kroxylicious proxy — envelope encryption for log data
+#   - MirrorMaker 2 only (MirrorMaker 1 removed)
+#   - Java 17 minimum (brokers/Connect)
+#   - ~33% fewer pods vs 2.x (no ZK pods)
+#   - Simpler operations — no ZooKeeper expertise needed
+#
+# IMPORTANT: Streams 3.1 requires KRaft mode — there is NO
+#   ZooKeeper mode in Kafka 4.x. Do not attempt to configure
+#   ZooKeeper — it will fail.
+#
+# APPLY WITH:
+#   oc apply -f wave-1-kafka-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n dark-noc-kafka | grep amq-streams
+#   # Wait for: amq-streams.v3.1.x    Succeeded
+# =============================================================
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: streams-operator-group
+  namespace: dark-noc-kafka
+spec:
+  targetNamespaces:
+    - dark-noc-kafka    # Watch only dark-noc-kafka namespace
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: amq-streams
+  namespace: dark-noc-kafka
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: amq-streams
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

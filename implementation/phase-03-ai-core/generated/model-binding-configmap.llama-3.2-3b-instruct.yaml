@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-model-binding
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/model-profile: llama-3.2-3b-instruct
+data:
+  MODEL_ID: "llama-3.2-3b-instruct"
+  VLLM_URL: "http://llama32-vllm-predictor.dark-noc-hub.svc:8080/v1"
+  MODEL_API_URL: "http://llama32-vllm-predictor.dark-noc-hub.svc:8080/v1/completions"
+  INFERENCE_SERVICE_NAME: "llama32-vllm"

@@ -1,0 +1,94 @@
+# =============================================================
+# Redis — Standalone Deployment for Langfuse
+# =============================================================
+# PURPOSE:
+#   Redis provides caching and queue backend for Langfuse 3.14.5.
+#   Langfuse uses Redis for:
+#   - Session token caching (auth performance)
+#   - Background job queuing (trace ingestion pipeline)
+#   - Rate limiting per API key
+#   - Real-time score aggregation cache
+#
+# WHY STANDALONE (not Cluster mode):
+#   Demo use — single Redis instance is sufficient.
+#   Langfuse's ingestion throughput for demo (<1000 traces/hour)
+#   does not require Redis Cluster or Sentinel.
+#
+# SIZING:
+#   256Mi RAM — Langfuse uses Redis for small objects (tokens, UUIDs)
+#   Not storing large payloads in Redis — those go to ClickHouse
+#
+# APPLY WITH:
+#   oc apply -f redis-deployment.yaml -n dark-noc-observability
+#
+# VERIFY:
+#   oc exec -n dark-noc-observability deploy/redis -- redis-cli ping
+#   # Expected: PONG
+# =============================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: dark-noc-observability
+  labels:
+    app: redis
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: docker.io/library/redis:7.4-alpine
+          command:
+            - redis-server
+            - "--save"
+            - ""            # Disable persistence — demo Redis, no RDB/AOF
+            - "--loglevel"
+            - "warning"
+          ports:
+            - containerPort: 6379
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: dark-noc-observability
+  labels:
+    app: redis
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379

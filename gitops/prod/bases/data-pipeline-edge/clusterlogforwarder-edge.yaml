@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster: edge
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dark-noc-edge-collector-application
+subjects:
+  - kind: ServiceAccount
+    name: collector
+    namespace: openshift-logging
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: collect-application-logs
+---
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: instance
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster: edge
+spec:
+  managementState: Managed
+  serviceAccount:
+    name: collector
+  inputs:
+    - name: nginx-logs-input
+      type: application
+      application:
+        namespaces:
+          - dark-noc-edge
+        selector:
+          matchLabels:
+            app: nginx
+  outputs:
+    - name: hub-kafka
+      type: kafka
+      kafka:
+        url: "tls://REPLACE-WITH-HUB-KAFKA-BOOTSTRAP-HOST:443"
+        topic: nginx-logs
+      tls:
+        ca:
+          secretName: dark-noc-kafka-cluster-ca-cert
+          key: ca.crt
+  pipelines:
+    - name: nginx-to-kafka
+      inputRefs:
+        - nginx-logs-input
+      outputRefs:
+        - hub-kafka

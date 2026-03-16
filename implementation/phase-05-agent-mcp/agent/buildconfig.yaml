@@ -1,0 +1,48 @@
+# =============================================================
+# Dark NOC Agent — ImageStream + Binary BuildConfig
+# =============================================================
+# PURPOSE:
+#   Builds the LangGraph Dark NOC agent image from local source
+#   using OpenShift Docker strategy and pushes it to internal
+#   registry as dark-noc-agent:latest in dark-noc-hub namespace.
+#
+# USAGE:
+#   oc -n dark-noc-hub apply -f buildconfig.yaml
+#   oc -n dark-noc-hub start-build dark-noc-agent --from-dir=. --follow
+#
+# NOTE:
+#   Run the start-build command from:
+#   implementation/phase-05-agent-mcp/agent/
+# =============================================================
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: dark-noc-agent
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/component: agent
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: dark-noc-agent
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/component: agent
+spec:
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: dark-noc-agent:latest
+  triggers:
+    - type: ConfigChange

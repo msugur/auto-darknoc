@@ -1,0 +1,56 @@
+# =============================================================
+# Loki Operator — Subscription (Hub)
+# =============================================================
+# PURPOSE:
+#   The Loki Operator manages LokiStack — the log storage backend
+#   for OpenShift Logging 6.4. LokiStack stores logs in MinIO
+#   (S3-compatible) and exposes a LogQL HTTP API.
+#
+# WHY SEPARATE FROM CLUSTER LOGGING:
+#   Loki Operator and Cluster Logging are separate operators that
+#   work together. The Cluster Logging operator creates a
+#   ClusterLogging CR that references a LokiStack instance.
+#   Both must be installed before either CR is created.
+#
+# LOKI STACK SIZING (1x.extra-small for demo):
+#   - 1x ingester, 1x querier, 1x distributor
+#   - ~2 GB RAM total, ~1 vCPU
+#   - Suitable for demo log volumes (<10 GB/day)
+#   - NOT suitable for production telco log volumes
+#
+# STORAGE BACKEND:
+#   LokiStack uses MinIO on-cluster via Secret with AWS S3 API.
+#   MinIO bucket: loki-chunks (created by minio-init-job.yaml)
+#   Secret format: loki-minio-secret with
+#     endpoint, bucketnames, access_key_id, access_key_secret
+#
+# APPLY WITH (on HUB cluster):
+#   oc apply -f wave-1-loki-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n openshift-operators-redhat | grep loki
+#   # Wait for: loki-operator.v0.x.x   Succeeded
+# =============================================================
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: loki-operator
+  namespace: openshift-operators-redhat   # Loki installs cluster-wide
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable-6.4
+  installPlanApproval: Automatic
+  name: loki-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+# OperatorGroup for openshift-operators-redhat
+# This namespace handles operators that need AllNamespaces scope
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-operators-redhat-og
+  namespace: openshift-operators-redhat
+spec: {}   # Empty spec = AllNamespaces installation mode

@@ -1,0 +1,115 @@
+# =============================================================
+# GPU Worker MachineSet — g5.2xlarge for Hub Cluster
+# =============================================================
+# PURPOSE:
+#   Adds a dedicated GPU worker node to the hub SNO cluster.
+#   This node runs the vLLM inference pod for Granite 4.0 H-Tiny.
+#   Without a GPU node, Granite inference is not possible.
+#
+# WHY g5.2xlarge:
+#   - 1x NVIDIA A10G GPU (24 GB VRAM) — fits Granite-4.0-H-Tiny at INT8
+#   - 8 vCPU / 32 GB RAM — sufficient for vLLM + NVIDIA toolkit overhead
+#   - ~$1.21/hr on-demand in us-east-1 — cost-effective for demo
+#   - A10G: 250 TFLOPS FP16, 125 TFLOPS BF16 — fast enough for demo
+#
+# Granite-4.0-H-Tiny memory at INT8:
+#   7B total params × 1 byte = ~8 GB VRAM
+#   24 GB A10G - 8 GB model = 16 GB free for KV cache
+#   Supports ~150 tokens/sec throughput — excellent for demo
+#
+# HOW TO FILL IN PLACEHOLDERS:
+#   1. Get your cluster infrastructure ID:
+#      oc get -o jsonpath='{.status.infrastructureName}{"\n"}' \
+#        infrastructure cluster
+#   2. Get existing MachineSet for reference:
+#      oc get machinesets -n openshift-machine-api -o yaml | head -100
+#   3. Replace ALL <CLUSTER-ID> with your infrastructure ID
+#   4. Replace <AVAILABILITY-ZONE> with your AZ (e.g., us-east-1a)
+#   5. Replace <AMI-ID> with the RHCOS AMI for your region/version
+#      (Get from existing MachineSet's providerSpec)
+#   6. Replace <SUBNET-ID> with your worker subnet ID
+#   7. Replace <SECURITY-GROUP-NAME> with your cluster security group
+#
+# APPLY WITH:
+#   oc apply -f gpu-worker-machineset.yaml
+#
+# MONITOR:
+#   watch oc get machines -n openshift-machine-api
+#   # Wait for Phase: Running (takes 5-10 minutes)
+#
+# VERIFY GPU READY:
+#   oc get nodes -l nvidia.com/gpu.present=true
+#   oc get nodes -l node.kubernetes.io/instance-type=g5.2xlarge
+# =============================================================
+---
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  name: <CLUSTER-ID>-gpu-worker-<AVAILABILITY-ZONE>
+  namespace: openshift-machine-api
+  labels:
+    machine.openshift.io/cluster-api-cluster: <CLUSTER-ID>
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/role: gpu-inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: <CLUSTER-ID>
+      machine.openshift.io/cluster-api-machineset: <CLUSTER-ID>-gpu-worker-<AVAILABILITY-ZONE>
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: <CLUSTER-ID>
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: <CLUSTER-ID>-gpu-worker-<AVAILABILITY-ZONE>
+        # Custom label for Dark NOC GPU workload scheduling
+        dark-noc/gpu-worker: "true"
+    spec:
+      metadata:
+        labels:
+          # These labels appear on the resulting Node object
+          node-role.kubernetes.io/gpu-worker: ""
+          dark-noc/gpu-worker: "true"
+      taints:
+        # Taint prevents non-GPU pods from scheduling here
+        # vLLM InferenceService has the matching toleration
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+      providerSpec:
+        value:
+          apiVersion: machine.openshift.io/v1beta1
+          kind: AWSMachineProviderConfig
+          instanceType: g5.2xlarge          # 1x A10G 24GB VRAM, 8 vCPU, 32GB RAM
+          ami:
+            id: <AMI-ID>                    # RHCOS AMI — get from existing MachineSet
+          region: us-east-1
+          placement:
+            availabilityZone: <AVAILABILITY-ZONE>   # e.g., us-east-1a
+          subnet:
+            id: <SUBNET-ID>                 # Worker subnet ID from existing MachineSet
+          iamInstanceProfile:
+            id: <CLUSTER-ID>-worker-profile
+          securityGroups:
+            - filters:
+                - name: tag:Name
+                  values:
+                    - <CLUSTER-ID>-worker-sg
+          userDataSecret:
+            name: worker-user-data
+          credentialsSecret:
+            name: aws-cloud-credentials
+          blockDevices:
+            - ebs:
+                volumeType: gp3
+                volumeSize: 200           # 200GB for model weight staging + RHCOS
+                iops: 3000
+                encrypted: true
+          tags:
+            - name: kubernetes.io/cluster/<CLUSTER-ID>
+              value: owned
+            - name: dark-noc/role
+              value: gpu-inference
+            - name: dark-noc/gpu-type
+              value: a10g

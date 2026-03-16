@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: openshift-gitops
+data:
+  service.slack: |
+    token: $slack-token
+  trigger.on-sync-failed: |
+    - description: App sync failed
+      send:
+        - slack-failure
+      when: app.status.operationState.phase in ['Error', 'Failed']
+  template.slack-failure: |
+    message: |
+      Dark NOC deploy failure
+      app={{.app.metadata.name}}
+      phase={{.app.status.operationState.phase}}
+      sync={{.app.status.sync.status}}
+      health={{.app.status.health.status}}
+      repo={{.app.spec.source.repoURL}}
+      revision={{.app.status.sync.revision}}
+  subscriptions: |
+    - recipients:
+      - slack:#demos
+      triggers:
+      - on-sync-failed
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: openshift-gitops
+type: Opaque
+stringData:
+  slack-token: REPLACE_WITH_XOXB_TOKEN
