@@ -46,7 +46,7 @@ spec:
   instances: 1
   # Custom image with pgvector 0.8.1 compiled in
   imageName: >-
-    image-registry.openshift-image-registry.svc:5000/dark-noc-rag/pgvector-postgres:16.4-v0.8.1
+    ghcr.io/pgvector/pgvector:pg16
 
   postgresql:
     shared_preload_libraries:
@@ -101,4 +101,4 @@ metadata:
 type: Opaque
 stringData:
   username: "noc_agent"
-  password: "<CHANGE-ME-PGVECTOR-POSTGRES-PASSWORD>"
+  password: "pgvector-noc-demo-2026"
