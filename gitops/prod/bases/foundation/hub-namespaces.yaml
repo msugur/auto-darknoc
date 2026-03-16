@@ -105,16 +105,3 @@ metadata:
   annotations:
     openshift.io/description: "Dark NOC: MinIO S3-compatible storage (model weights, LokiStack, Langfuse)"
     openshift.io/display-name: "Dark NOC — MinIO Storage"
----
-# ServiceNow Mock — Demo ticket system
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: dark-noc-servicenow-mock
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-    dark-noc/layer: integration
-    dark-noc/cluster: hub
-  annotations:
-    openshift.io/description: "Dark NOC: FastAPI mock ServiceNow REST API for demo"
-    openshift.io/display-name: "Dark NOC — ServiceNow Mock"

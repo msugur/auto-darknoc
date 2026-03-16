@@ -60,9 +60,16 @@ spec:
   source: redhat-operators
   sourceNamespace: openshift-marketplace
 ---
+# Create namespace explicitly so Argo can apply SMCP/SMMR safely.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
 # ServiceMeshControlPlane — activates Istio control plane
 # Apply AFTER both CSVs reach Succeeded state
-# NOTE: Namespace istio-system is auto-created by the CR
 apiVersion: maistra.io/v2
 kind: ServiceMeshControlPlane
 metadata:

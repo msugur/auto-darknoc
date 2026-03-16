@@ -43,6 +43,7 @@ metadata:
   name: aap
   labels:
     app.kubernetes.io/part-of: dark-noc
+  annotations:
     openshift.io/description: "Red Hat Ansible Automation Platform 2.5"
 ---
 apiVersion: operators.coreos.com/v1
