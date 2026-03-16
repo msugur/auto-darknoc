@@ -16,6 +16,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
+              python -m pip install --no-cache-dir requests
               python /scripts/publish_access_center.py
           envFrom:
             - secretRef:
