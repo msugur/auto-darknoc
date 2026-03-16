@@ -1,5 +1,5 @@
 # =============================================================
-# EDAController — Event-Driven Ansible 2.5
+# EDA — Event-Driven Ansible 2.5
 # =============================================================
 # PURPOSE:
 #   EDA Controller watches Kafka topics and auto-triggers Ansible
@@ -28,12 +28,12 @@
 #   oc apply -f eda-controller.yaml -n aap
 #
 # VERIFY:
-#   oc get edacontroller -n aap
+#   oc get eda -n aap
 #   oc get route eda -n aap
 # =============================================================
 ---
 apiVersion: eda.ansible.com/v1alpha1
-kind: EDAController
+kind: EDA
 metadata:
   name: eda
   namespace: aap
@@ -43,13 +43,5 @@ spec:
   # Admin credentials (same admin as AutomationController)
   automation_server_url: "https://aap.aap.svc"
   automation_server_ssl_verify: "no"    # Self-signed cert in demo
-
-  # Resource sizing
-  replicas: 1
-  resource_requirements:
-    requests:
-      cpu: 200m
-      memory: 512Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
+  admin_user: "admin"
+  admin_password_secret: "aap-admin-secret"
