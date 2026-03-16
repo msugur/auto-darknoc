@@ -87,4 +87,4 @@ metadata:
 type: Opaque
 stringData:
   username: "langfuse"
-  password: "<CHANGE-ME-LANGFUSE-POSTGRES-PASSWORD>"
+  password: "langfuse-pg-demo-2026"
