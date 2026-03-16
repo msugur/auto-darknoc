@@ -5,6 +5,7 @@ resources:
   - clusterlogging-hub.yaml
   - kafka-cluster.yaml
   - kafka-topics.yaml
+  - langfuse-postgres-cnpg-netpol.yaml
   - langfuse-postgres-cluster.yaml
   - langfuse-route.yaml
   - lokistack-hub.yaml
