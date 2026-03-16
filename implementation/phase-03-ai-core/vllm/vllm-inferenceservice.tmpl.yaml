@@ -1,0 +1,84 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: __VLLM_RUNTIME_NAME__
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/model-profile: __PROFILE_NAME__
+spec:
+  builtInAdapter:
+    serverType: ovms
+  containers:
+    - name: kserve-container
+      image: __VLLM_IMAGE__
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--served-model-name=$(MODEL_NAME)"
+        - "--dtype=half"
+        - "--max-model-len=__MAX_MODEL_LEN__"
+        - "--gpu-memory-utilization=__GPU_MEMORY_UTILIZATION__"
+__TOOL_ARGS_BLOCK__
+      env:
+        - name: MODEL_NAME
+          value: "__MODEL_ID__"
+        - name: HF_HOME
+          value: "/tmp/hf_home"
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        requests:
+          cpu: "4"
+          memory: "12Gi"
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: "24Gi"
+          nvidia.com/gpu: "1"
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      version: "__VLLM_VERSION__"
+      autoSelect: true
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: __INFERENCE_SERVICE_NAME__
+  namespace: dark-noc-hub
+  labels:
+    app: __INFERENCE_SERVICE_NAME__
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+    dark-noc/model-profile: __PROFILE_NAME__
+  annotations:
+    dark-noc/model-id: "__MODEL_ID__"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: __VLLM_RUNTIME_NAME__
+      storageUri: "__MODEL_STORAGE_URI__"
+    nodeSelector:
+      dark-noc/gpu-worker: "true"
+    tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+    minReplicas: 1
+    maxReplicas: 1

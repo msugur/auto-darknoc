@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: automation-hub
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: auto-darknoc-prod
+  source:
+    repoURL: https://github.com/msugur/auto-darknoc.git
+    targetRevision: main
+    path: gitops/prod/stacks/hub/automation
+  destination:
+    name: in-cluster
+    namespace: aap
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true

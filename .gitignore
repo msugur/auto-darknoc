@@ -1,0 +1,92 @@
+# ============================================
+# Dark NOC .gitignore
+# ============================================
+
+# ---- Secrets & Credentials (NEVER commit) ----
+configs/hub/env.sh
+configs/edge/env.sh
+configs/access/*.local.*
+*.token
+*.kubeconfig
+kubeconfig
+.kube/
+secrets/
+*-secret.yaml
+*-credentials.yaml
+slack-token.txt
+aap-token.txt
+servicenow-creds.txt
+minio-creds.txt
+langfuse-keys.txt
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ---- Session Logs (auto-generated, large) ----
+logs/sessions/*.log
+logs/sessions/*.txt
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node / React ----
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+*.tsbuildinfo
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Helm ----
+charts/*/charts/
+*.tgz
+
+# ---- Temporary ----
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+
+# ---- Model weights (too large for git) ----
+models/
+*.bin
+*.safetensors
+*.gguf
+*.ggml
+
+# ---- OS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# GitOps real secrets
+gitops/prod/secrets/*.real.yaml
+!gitops/prod/secrets/*.template.yaml

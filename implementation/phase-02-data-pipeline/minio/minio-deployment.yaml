@@ -1,0 +1,173 @@
+# =============================================================
+# MinIO — Deployment + Service + Route
+# =============================================================
+# PURPOSE:
+#   MinIO provides S3-compatible object storage on-cluster.
+#   All components that need S3 (LokiStack, RHOAI model registry,
+#   Langfuse) use MinIO as the backend via standard AWS S3 API.
+#
+# ACCESS METHODS:
+#   Internal (pod-to-pod): http://minio.dark-noc-minio.svc:9000
+#   Console (browser):     https://minio-console-dark-noc-minio.apps.<cluster>
+#   S3 API (browser):      https://minio-api-dark-noc-minio.apps.<cluster>
+#
+# CREDENTIALS:
+#   Set via environment vars from minio-secret.
+#   Default for demo: admin / darknoc-minio-secret
+#   Change before sharing demo credentials externally.
+#
+# RESOURCE SIZING:
+#   Demo MinIO: 200m CPU, 256Mi RAM — very light
+#   MinIO is mostly I/O bound, not CPU/RAM bound
+#
+# APPLY WITH:
+#   oc apply -f minio-deployment.yaml -n dark-noc-minio
+#
+# VERIFY:
+#   oc get pods -n dark-noc-minio
+#   curl http://minio.dark-noc-minio.svc:9000/minio/health/live
+# =============================================================
+---
+# Secret — MinIO credentials
+# Apply this first. In production, use Sealed Secrets or Vault.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  MINIO_ROOT_USER: "admin"
+  MINIO_ROOT_PASSWORD: "darknoc-minio-secret"    # Change for your demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  strategy:
+    type: Recreate    # Recreate (not RollingUpdate) for single-node PVC
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: quay.io/minio/minio:RELEASE.2025-01-20T14-49-07Z
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+          ports:
+            - name: api
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# Route for MinIO Console (browser access)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: minio-console
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  to:
+    kind: Service
+    name: minio
+  port:
+    targetPort: console
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+# Route for MinIO S3 API (direct S3 API access)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: minio-api
+  namespace: dark-noc-minio
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  to:
+    kind: Service
+    name: minio
+  port:
+    targetPort: api
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

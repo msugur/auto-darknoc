@@ -1,0 +1,413 @@
+# =============================================================
+# MCP Servers — All 6 Deployments + Services
+# =============================================================
+# PURPOSE:
+#   Deploys all 6 FastMCP servers in the dark-noc-mcp namespace.
+#   Each server is a small Python pod (~64Mi RAM) exposing
+#   Streamable HTTP transport for the LangGraph agent.
+#
+# BUILD (before applying this deployment):
+#   For each server, build and push to internal registry:
+#   oc new-build --binary --name=mcp-openshift -n dark-noc-mcp
+#   oc start-build mcp-openshift --from-dir=mcp-servers/mcp-openshift --follow
+#   (repeat for mcp-lokistack, mcp-kafka, mcp-aap, mcp-slack, mcp-servicenow)
+#
+# APPLY WITH:
+#   oc apply -f mcp-servers-deployment.yaml -n dark-noc-mcp
+# =============================================================
+
+# ─── MCP OpenShift Server ────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-openshift
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-openshift
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-openshift
+  template:
+    metadata:
+      labels:
+        app: mcp-openshift
+    spec:
+      serviceAccountName: mcp-openshift-sa
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-openshift:latest
+          ports:
+            - containerPort: 8001
+          env:
+            - name: EDGE_KUBECONFIG
+              value: /kubeconfig/config
+            - name: PORT
+              value: "8001"
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /kubeconfig
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: edge-01-kubeconfig
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-openshift-sa
+  namespace: dark-noc-mcp
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-openshift
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-openshift
+spec:
+  selector:
+    app: mcp-openshift
+  ports:
+    - port: 8001
+      targetPort: 8001
+
+# ─── MCP LokiStack Server ────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-lokistack
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-lokistack
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-lokistack
+  template:
+    metadata:
+      labels:
+        app: mcp-lokistack
+    spec:
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-lokistack:latest
+          ports:
+            - containerPort: 8002
+          env:
+            - name: PORT
+              value: "8002"
+            - name: LOKI_URL
+              value: "http://logging-loki-gateway.openshift-logging.svc:8080"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-lokistack
+  namespace: dark-noc-mcp
+spec:
+  selector:
+    app: mcp-lokistack
+  ports:
+    - port: 8002
+      targetPort: 8002
+
+# ─── MCP Kafka Server ────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-kafka
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-kafka
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-kafka
+  template:
+    metadata:
+      labels:
+        app: mcp-kafka
+    spec:
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-kafka:latest
+          ports:
+            - containerPort: 8003
+          env:
+            - name: PORT
+              value: "8003"
+            - name: KAFKA_BOOTSTRAP
+              value: "dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc:9092"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-kafka
+  namespace: dark-noc-mcp
+spec:
+  selector:
+    app: mcp-kafka
+  ports:
+    - port: 8003
+      targetPort: 8003
+
+# ─── MCP AAP Server ──────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-aap
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-aap
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-aap
+  template:
+    metadata:
+      labels:
+        app: mcp-aap
+    spec:
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-aap:latest
+          ports:
+            - containerPort: 8004
+          env:
+            - name: PORT
+              value: "8004"
+            - name: AAP_URL
+              value: "http://aap-service.aap.svc"
+            - name: AAP_USERNAME
+              value: "admin"
+            - name: AAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aap-admin-secret
+                  key: password
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-aap
+  namespace: dark-noc-mcp
+spec:
+  selector:
+    app: mcp-aap
+  ports:
+    - port: 8004
+      targetPort: 8004
+
+# ─── MCP Slack Server ────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-slack
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-slack
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-slack
+  template:
+    metadata:
+      labels:
+        app: mcp-slack
+    spec:
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-slack:latest
+          ports:
+            - containerPort: 8005
+          env:
+            - name: PORT
+              value: "8005"
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: slack-secrets
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_NOC_CHANNEL
+              value: "#dark-noc-alerts"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-slack
+  namespace: dark-noc-mcp
+spec:
+  selector:
+    app: mcp-slack
+  ports:
+    - port: 8005
+      targetPort: 8005
+
+# ─── MCP ServiceNow Server ───────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-servicenow
+  namespace: dark-noc-mcp
+  labels:
+    app: mcp-servicenow
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-servicenow
+  template:
+    metadata:
+      labels:
+        app: mcp-servicenow
+    spec:
+      containers:
+        - name: server
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-servicenow:latest
+          ports:
+            - containerPort: 8006
+          env:
+            - name: PORT
+              value: "8006"
+            - name: SERVICENOW_URL
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_URL
+            - name: SERVICENOW_MODE
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_MODE
+            - name: SERVICENOW_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_USERNAME
+            - name: SERVICENOW_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_PASSWORD
+            - name: SERVICENOW_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_API_KEY
+            - name: SERVICENOW_CALLER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: servicenow-secrets
+                  key: SERVICENOW_CALLER_NAME
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: slack-secrets
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_NOC_CHANNEL
+              value: "#demos"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-servicenow
+  namespace: dark-noc-mcp
+spec:
+  selector:
+    app: mcp-servicenow
+  ports:
+    - port: 8006
+      targetPort: 8006
+---
+# ServiceNow secrets template (mock or real)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: servicenow-secrets
+  namespace: dark-noc-mcp
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  SERVICENOW_URL: "http://servicenow-mock.dark-noc-servicenow-mock.svc:8080"
+  SERVICENOW_MODE: "mock"
+  SERVICENOW_USERNAME: ""
+  SERVICENOW_PASSWORD: ""
+  SERVICENOW_API_KEY: "demo-api-key-2026"
+  SERVICENOW_CALLER_NAME: "Mithun Sugur"
+---
+# Slack secrets template (fill in before applying)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: slack-secrets
+  namespace: dark-noc-mcp
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  SLACK_BOT_TOKEN: "REPLACE_WITH_XOXB_TOKEN"

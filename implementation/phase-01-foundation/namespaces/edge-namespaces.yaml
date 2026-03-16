@@ -1,0 +1,37 @@
+# =============================================================
+# Dark NOC — Edge Cluster Namespaces
+# =============================================================
+# PURPOSE:
+#   Creates namespaces on the edge SNO cluster.
+#   Kept minimal — edge cluster runs lightweight workloads only.
+#
+# APPLY WITH:
+#   oc login $EDGE_API_URL --token=$EDGE_TOKEN
+#   oc apply -f edge-namespaces.yaml
+# =============================================================
+---
+# OpenShift Logging namespace (required for Logging operator on edge)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster: edge
+  annotations:
+    openshift.io/description: "Dark NOC: edge logging operator + ClusterLogForwarder"
+    openshift.io/display-name: "OpenShift Logging"
+---
+# Edge Workloads — nginx + log generator (the monitored app)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: edge-workload
+    dark-noc/cluster: edge
+    dark-noc/site-id: "edge-01"
+  annotations:
+    openshift.io/description: "Dark NOC: nginx workload, edge log generator, failure simulation"
+    openshift.io/display-name: "Dark NOC — Edge Workloads"

@@ -1,0 +1,90 @@
+# =============================================================
+# Langfuse PostgreSQL Cluster — CloudNativePG
+# =============================================================
+# PURPOSE:
+#   Provides the metadata database for Langfuse 3.14.5.
+#   Langfuse stores: trace metadata, span records, user sessions,
+#   evaluation results, and LLM-as-judge scores in PostgreSQL.
+#   (Langfuse 3.x uses ClickHouse for hot OLAP data, PG for metadata)
+#
+# WHY CLOUDNATIVEPG:
+#   - Kubernetes-native operator (no VMs needed)
+#   - Handles PVC provisioning, backup, connection pooling
+#   - Automatic password rotation + secret management
+#   - Works natively with OpenShift SCCs
+#
+# DATABASE DETAILS:
+#   Name: langfuse
+#   User: langfuse
+#   Password: auto-generated and stored in Secret:
+#     dark-noc-observability/langfuse-postgres-app
+#     Key: uri (full postgres:// URI)
+#
+# SIZING (demo):
+#   1 instance (no HA — demo use)
+#   10Gi PVC — sufficient for ~1M traces
+#
+# APPLY WITH:
+#   oc apply -f langfuse-postgres-cluster.yaml -n dark-noc-observability
+#
+# VERIFY:
+#   oc get cluster langfuse-postgres -n dark-noc-observability
+#   oc get pods -n dark-noc-observability -l cnpg.io/cluster=langfuse-postgres
+# =============================================================
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: langfuse-postgres
+  namespace: dark-noc-observability
+  labels:
+    app: langfuse-postgres
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: data
+spec:
+  instances: 1
+  imageName: registry.hub.docker.com/library/postgres:16.4
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "128MB"
+      effective_cache_size: "512MB"
+      work_mem: "4MB"
+
+  bootstrap:
+    initdb:
+      database: langfuse
+      owner: langfuse
+      secret:
+        name: langfuse-postgres-superuser   # Pre-created secret with password
+
+  storage:
+    size: 10Gi
+    storageClass: gp3-csi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # NOTE:
+  # Backup is intentionally omitted in the initial deploy path.
+  # Enable barmanObjectStore after creating a MinIO credential secret
+  # in the same namespace (`dark-noc-observability`).
+---
+# Pre-create the superuser secret (CloudNativePG needs this before bootstrap)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: langfuse-postgres-superuser
+  namespace: dark-noc-observability
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  username: "langfuse"
+  password: "<CHANGE-ME-LANGFUSE-POSTGRES-PASSWORD>"

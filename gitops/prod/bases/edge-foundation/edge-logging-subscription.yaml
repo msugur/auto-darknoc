@@ -1,0 +1,64 @@
+# =============================================================
+# OpenShift Logging 6.4 — Operator Subscription (EDGE cluster)
+# =============================================================
+# PURPOSE:
+#   Installs the Cluster Logging operator on the EDGE cluster.
+#   Unlike the hub, the edge only needs a ClusterLogForwarder —
+#   NOT a full LokiStack. Edge logs are forwarded directly to
+#   Hub Kafka via Vector's Kafka output.
+#
+# EDGE LOGGING ARCHITECTURE:
+#   Edge Vector (DaemonSet on every edge node):
+#     Input:  Kubernetes container logs (nginx pod only)
+#     Filter: Parse nginx JSON access/error logs
+#     Output: Kafka TLS → hub bootstrap (nginx-logs topic)
+#
+# IMPORTANT: DO NOT create a ClusterLogging CR on edge.
+#   ClusterLogging creates a LokiStack + Vector which stores
+#   logs locally. Edge has no MinIO and no LokiStack.
+#   Only deploy a ClusterLogForwarder CR on edge.
+#
+# WHAT GETS FORWARDED:
+#   - nginx access logs (JSON format)
+#   - nginx error logs
+#   - Pod crash/OOMKilled events (from Kubernetes audit)
+#
+# WHAT STAYS ON EDGE (not forwarded):
+#   - System journal logs (too noisy for demo)
+#   - Other pod logs (reduces Kafka noise)
+#
+# APPLY WITH (on EDGE cluster):
+#   oc apply -f edge-logging-subscription.yaml
+#
+# VERIFY (on edge):
+#   oc get csv -n openshift-logging | grep cluster-logging
+#   # After ClusterLogForwarder is applied:
+#   oc get pods -n openshift-logging
+#   oc logs -n openshift-logging daemonset/collector | grep kafka
+# =============================================================
+---
+# NOTE: Ensure `openshift-logging` namespace exists first
+# (created by `phase-01-foundation/namespaces/edge-namespaces.yaml`)
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: cluster-logging-og
+  namespace: openshift-logging
+spec:
+  targetNamespaces:
+    - openshift-logging
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-logging
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster: edge
+spec:
+  channel: stable-6.4
+  installPlanApproval: Automatic
+  name: cluster-logging
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

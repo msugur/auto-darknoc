@@ -1,0 +1,78 @@
+# =============================================================
+# ManagedCluster — Edge Cluster Enrollment in ACM
+# =============================================================
+# PURPOSE:
+#   Registers the edge SNO cluster with ACM Hub.
+#   After enrollment, ACM can:
+#   - Push ApplicationSets (GitOps) to edge
+#   - Enforce Policy compliance on edge
+#   - Display edge cluster in ACM topology view
+#   - Copy secrets (Kafka CA cert) to edge namespace
+#
+# ENROLLMENT METHODS:
+#   1. Manual: Apply ManagedCluster CR + provide kubeconfig
+#   2. Auto-import: ACM generates import YAML to apply on edge
+#   3. ACM console: GUI-driven enrollment
+#
+# WE USE METHOD 2 (Auto-import):
+#   1. Apply this ManagedCluster CR on Hub
+#   2. ACM creates: klusterlet-crd.yaml + import.yaml
+#   3. Apply both YAMLs on Edge cluster
+#   4. Edge klusterlet connects back to Hub (no inbound needed!)
+#
+# WHY NO INBOUND PORTS NEEDED:
+#   The klusterlet (on edge) INITIATES the connection TO hub.
+#   Hub never connects inbound to edge.
+#   This works through any NAT/firewall.
+#
+# APPLY WITH:
+#   oc apply -f managed-cluster.yaml -n open-cluster-management
+#
+# THEN: Get import command:
+#   oc get secret edge-01-import \
+#     -n edge-01 -o jsonpath='{.data.import\.yaml}' | \
+#     base64 -d > /tmp/edge-import.yaml
+#   oc --context=${EDGE_CONTEXT} apply -f /tmp/edge-import.yaml
+#
+# VERIFY:
+#   oc get managedcluster edge-01
+#   # Expected: JOINED: True, AVAILABLE: True
+# =============================================================
+---
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: edge-01
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster-type: edge
+    dark-noc/site-id: edge-01
+    cloud: Amazon
+    region: us-east-1
+    vendor: OpenShift
+    environment: demo
+spec:
+  hubAcceptsClient: true   # Hub approves edge connection request
+  leaseDurationSeconds: 60  # Heartbeat interval (default: 60s)
+---
+# KlusterletAddonConfig — configures which ACM features run on edge
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: edge-01
+  namespace: edge-01
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  clusterName: edge-01
+  clusterNamespace: edge-01
+  applicationManager:
+    enabled: true    # Argo CD GitOps on edge
+  policyController:
+    enabled: true    # Policy enforcement
+  searchCollector:
+    enabled: true    # Edge resources visible in ACM search
+  certPolicyController:
+    enabled: true    # Certificate policy monitoring
+  iamPolicyController:
+    enabled: false   # Not needed for demo

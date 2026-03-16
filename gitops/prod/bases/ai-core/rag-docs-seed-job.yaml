@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rag-docs-seed
+  namespace: dark-noc-rag
+  labels:
+    app: rag-docs-seed
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: rag-docs-seed
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: docs-seeder
+          image: python:3.12-slim
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGVECTOR_HOST
+              value: pgvector-postgres-rw.dark-noc-rag.svc
+            - name: PGVECTOR_PORT
+              value: "5432"
+            - name: PGVECTOR_DB
+              value: noc_rag
+            - name: PGVECTOR_USER
+              value: noc_agent
+            - name: PGVECTOR_PASSWORD
+              value: pgvector-noc-demo-2026
+            - name: DOC_SOURCES_FILE
+              value: /config/documentation-sources.yaml
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PIP_DISABLE_PIP_VERSION_CHECK
+              value: "1"
+            - name: PYTHONPATH
+              value: /tmp/pylibs
+            - name: HF_HOME
+              value: /tmp/hf
+          command:
+            - /bin/bash
+            - -lc
+            - |
+              set -euo pipefail
+              python -m pip install --no-cache-dir --target /tmp/pylibs \
+                requests==2.32.3 \
+                pyyaml==6.0.2 \
+                beautifulsoup4==4.12.3 \
+                psycopg2-binary==2.9.10 \
+                sentence-transformers==5.1.0 \
+                --extra-index-url https://download.pytorch.org/whl/cpu \
+                torch==2.8.0+cpu
+              python /scripts/seed-product-docs.py
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: seed-script
+              mountPath: /scripts
+            - name: docs-config
+              mountPath: /config
+      volumes:
+        - name: seed-script
+          configMap:
+            name: rag-docs-seed-script
+            defaultMode: 0755
+        - name: docs-config
+          configMap:
+            name: rag-docs-sources

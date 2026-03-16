@@ -1,0 +1,76 @@
+# =============================================================
+# Node Feature Discovery (NFD) — Operator Subscription
+# =============================================================
+# PURPOSE:
+#   NFD discovers hardware features on each node and exposes them
+#   as Kubernetes node labels. The NVIDIA GPU Operator REQUIRES
+#   NFD to be running first — it uses NFD labels to identify
+#   which nodes have GPUs before installing the CUDA toolkit.
+#
+# WHY FIRST:
+#   Without NFD labels, the GPU Operator cannot determine which
+#   nodes need the NVIDIA driver DaemonSet deployed. Installing
+#   GPU Operator before NFD results in the driver never being
+#   installed, even if a GPU node exists.
+#
+# WHAT NFD LABELS (examples on GPU node after install):
+#   feature.node.kubernetes.io/pci-10de.present=true  (NVIDIA vendor)
+#   feature.node.kubernetes.io/cpu-cpuid.AVX512F=true
+#   feature.node.kubernetes.io/kernel-version.full=5.14.x
+#
+# APPLY WITH:
+#   oc apply -f wave-0-nfd-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n openshift-nfd
+#   oc get pods -n openshift-nfd
+#   oc get nodes -o json | jq '.items[].metadata.labels | keys[] | select(startswith("feature.node"))'
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-nfd
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: nfd-operator-group
+  namespace: openshift-nfd
+spec:
+  targetNamespaces:
+    - openshift-nfd
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: nfd
+  namespace: openshift-nfd
+spec:
+  channel: stable
+  installPlanApproval: Automatic
+  name: nfd
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+# NodeFeatureDiscovery CR — activates NFD worker on all nodes
+apiVersion: nfd.openshift.io/v1
+kind: NodeFeatureDiscovery
+metadata:
+  name: nfd-instance
+  namespace: openshift-nfd
+spec:
+  operand:
+    image: registry.redhat.io/openshift4/ose-node-feature-discovery-rhel9
+    imagePullPolicy: Always
+  workerConfig:
+    configData: |
+      sources:
+        pci:
+          deviceClassWhitelist:
+            - "0300"   # GPU class
+            - "0302"   # 3D controller
+          deviceLabelFields:
+            - vendor

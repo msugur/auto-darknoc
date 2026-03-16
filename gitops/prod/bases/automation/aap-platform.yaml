@@ -1,0 +1,40 @@
+---
+# =============================================================
+# Ansible Automation Platform (AAP) - Full Platform CR
+# =============================================================
+# PURPOSE:
+#   Deploy full enterprise AAP via the Red Hat certified AAP Operator
+#   using the AnsibleAutomationPlatform custom resource.
+#
+# COMPONENTS ENABLED:
+#   - Controller
+#   - Automation Hub
+#   - Event-Driven Ansible (EDA)
+#
+# NOTES:
+#   - Uses existing admin password secret: aap-admin-secret
+#   - Exposes platform through OpenShift Route ingress.
+# =============================================================
+apiVersion: aap.ansible.com/v1alpha1
+kind: AnsibleAutomationPlatform
+metadata:
+  name: aap-enterprise
+  namespace: aap
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  admin_password_secret: aap-admin-secret
+  ingress_type: Route
+  route_tls_termination_mechanism: Edge
+  no_log: true
+  controller: {}
+  hub:
+    storage_type: file
+    file_storage_access_mode: ReadWriteOnce
+    file_storage_storage_class: gp3-csi
+    file_storage_size: 20Gi
+    content:
+      replicas: 1
+    worker:
+      replicas: 1
+  eda: {}

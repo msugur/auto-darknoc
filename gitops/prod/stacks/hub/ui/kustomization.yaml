@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/ui
+patches:
+  - target:
+      kind: Deployment
+      name: dark-noc-chatbot
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:chatbot-gitsha
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://dev365997.service-now.com"
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "real"
+      - op: replace
+        path: /spec/template/spec/containers/0/env/42/value
+        value: "https://octo-emerging-tech.slack.com"
+  - target:
+      kind: Deployment
+      name: dark-noc-dashboard
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:dashboard-gitsha

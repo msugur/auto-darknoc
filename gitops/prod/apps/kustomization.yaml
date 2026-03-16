@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - predeploy-hub.yaml
+  - foundation-hub.yaml
+  - foundation-edge.yaml
+  - minio-hub.yaml
+  - data-pipeline-hub.yaml
+  - data-pipeline-edge.yaml
+  - ai-core-hub.yaml
+  - automation-hub.yaml
+  - agent-mcp-hub.yaml
+  - ui-hub.yaml
+  - observability-hub.yaml
+  - notifications-hub.yaml

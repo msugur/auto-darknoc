@@ -1,0 +1,69 @@
+# =============================================================
+# Red Hat Ansible Automation Platform (AAP) 2.5 — Subscription
+# =============================================================
+# PURPOSE:
+#   AAP provides the automation execution layer for Dark NOC.
+#   When the LangGraph agent determines remediation steps, it
+#   calls the AAP MCP server which triggers Ansible playbooks
+#   to fix the failing component on the edge cluster.
+#
+# AAP 2.5 KEY FEATURES USED:
+#   - Automation Controller: REST API for launching job templates
+#     The FastMCP AAP server calls the REST API to trigger jobs.
+#   - EDA (Event-Driven Ansible) Controller: Kafka source plugin
+#     Watches the nginx-errors Kafka topic and triggers Ansible
+#     for pattern-matched alert rules (pre-AI fast path).
+#   - Unified Platform Gateway: Single ingress for all AAP services
+#   - Event Streams fan-out: One Kafka event → multiple rulebooks
+#
+# AUTOMATION FLOW:
+#   LangGraph agent → AAP MCP server → Controller REST API
+#   → Job Template runs → Playbook runs on edge via Dynamic Inventory
+#
+# EDA FLOW (fast path, no AI):
+#   Kafka topic → EDA Kafka source plugin → Rulebook match
+#   → Automation Controller job launch → playbook runs
+#
+# NOTE: AAP 2.5 on OpenShift uses the operator-managed
+#   AutomationController and EDAController CRs (not old Tower
+#   installer). No separate database setup needed — operator
+#   provisions PostgreSQL internally.
+#
+# APPLY WITH:
+#   oc apply -f wave-1-aap-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n aap | grep ansible
+#   # Wait for: aap-operator.v2.5.x   Succeeded
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aap
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    openshift.io/description: "Red Hat Ansible Automation Platform 2.5"
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: aap-operator-group
+  namespace: aap
+spec:
+  targetNamespaces:
+    - aap
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: ansible-automation-platform-operator
+  namespace: aap
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable-2.5
+  installPlanApproval: Automatic
+  name: ansible-automation-platform-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

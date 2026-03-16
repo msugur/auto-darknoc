@@ -1,0 +1,126 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dark-noc-chatbot
+  namespace: dark-noc-ui
+  labels:
+    app: dark-noc-chatbot
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dark-noc-chatbot
+  template:
+    metadata:
+      labels:
+        app: dark-noc-chatbot
+    spec:
+      containers:
+        - name: chatbot
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-ui/dark-noc-chatbot:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICENOW_URL
+              value: "https://dev365997.service-now.com"
+            - name: SERVICENOW_MODE
+              value: "real"
+            - name: SERVICENOW_USERNAME
+              value: "admin"
+            - name: SERVICENOW_PASSWORD
+              value: "D$*REPLACE_WITH_SERVICENOW_PASSWORD"
+            - name: SERVICENOW_API_KEY
+              value: "demo-api-key-2026"
+            - name: SERVICENOW_UI_URL
+              value: "https://dev365997.service-now.com/incident_list.do"
+            - name: SERVICENOW_UI_USERNAME
+              value: "admin"
+            - name: SERVICENOW_UI_PASSWORD
+              value: "D$*REPLACE_WITH_SERVICENOW_PASSWORD"
+            - name: SLACK_WORKSPACE_URL
+              value: "https://octo-emerging-tech.slack.com"
+            - name: SLACK_UI_USERNAME
+              value: ""
+            - name: SLACK_UI_PASSWORD
+              value: ""
+            - name: OPENSHIFT_CONSOLE_URL
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: OPENSHIFT_USERNAME
+              value: "admin"
+            - name: OPENSHIFT_PASSWORD
+              value: "qCyH8I67Ry"
+            - name: AAP_UI_URL
+              value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: AAP_UI_USERNAME
+              value: "admin"
+            - name: AAP_UI_PASSWORD
+              value: "redhat"
+            - name: KAFKA_UI_URL
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod"
+            - name: LOKI_UI_URL
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/monitoring/logs"
+            - name: AI_MODEL_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: dark-noc-model-binding
+                  key: MODEL_ID
+                  optional: true
+            - name: AGENT_FRAMEWORK
+              value: "LangGraph + MCP + LlamaStack"
+            - name: MODEL_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dark-noc-model-binding
+                  key: MODEL_API_URL
+                  optional: true
+            - name: MODEL_TIMEOUT_SECONDS
+              value: "25"
+            - name: MODEL_MAX_TOKENS
+              value: "280"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dark-noc-chatbot
+  namespace: dark-noc-ui
+  labels:
+    app: dark-noc-chatbot
+spec:
+  selector:
+    app: dark-noc-chatbot
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dark-noc-chatbot
+  namespace: dark-noc-ui
+  labels:
+    app: dark-noc-chatbot
+spec:
+  to:
+    kind: Service
+    name: dark-noc-chatbot
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

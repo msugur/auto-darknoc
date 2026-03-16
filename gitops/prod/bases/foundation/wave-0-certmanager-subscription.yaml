@@ -1,0 +1,103 @@
+# =============================================================
+# cert-manager — Operator Subscription
+# =============================================================
+# PURPOSE:
+#   cert-manager automates TLS certificate management for all
+#   Dark NOC services. It handles certificate issuance, renewal,
+#   and rotation. Required by Service Mesh (Istio), LlamaStack,
+#   and AAP for mTLS between services.
+#
+# WHY WAVE 0:
+#   Service Mesh and several operators check for cert-manager CRDs
+#   at install time. cert-manager must be running before Service
+#   Mesh is installed or the webhooks will fail validation.
+#
+# WHAT IT MANAGES:
+#   - Self-signed CA for internal service-to-service mTLS
+#   - Wildcard cert for *.apps.<cluster-domain> (Ingress)
+#   - Route53 ACME certificates (optional for demo)
+#
+# APPLY WITH:
+#   oc apply -f wave-0-certmanager-subscription.yaml
+#
+# VERIFY:
+#   oc get csv -n cert-manager-operator
+#   oc get pods -n cert-manager
+#   oc get crd certificates.cert-manager.io
+# =============================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager-operator
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: cert-manager-operator-group
+  namespace: cert-manager-operator
+spec:
+  targetNamespaces:
+    - cert-manager-operator
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: cert-manager-operator
+  namespace: cert-manager-operator
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  channel: stable-v1
+  installPlanApproval: Automatic
+  name: cert-manager-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+# ClusterIssuer — Self-signed CA for internal services
+# Apply AFTER cert-manager pods are Running
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: dark-noc-selfsigned-issuer
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  selfSigned: {}
+---
+# CA Certificate — used to sign internal service certs
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dark-noc-ca
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  isCA: true
+  commonName: dark-noc-ca
+  secretName: dark-noc-ca-secret
+  duration: 87600h    # 10 years — demo CA, not production
+  renewBefore: 720h   # Renew 30 days before expiry
+  subject:
+    organizations:
+      - dark-noc-demo
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: dark-noc-selfsigned-issuer
+    kind: ClusterIssuer
+---
+# CA-backed ClusterIssuer — used by all Dark NOC services
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: dark-noc-ca-issuer
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  ca:
+    secretName: dark-noc-ca-secret

@@ -1,0 +1,105 @@
+# =============================================================
+# MinIO Init Job — Create 3 Required Buckets
+# =============================================================
+# PURPOSE:
+#   Creates the 3 buckets that Dark NOC components expect:
+#   1. rhoai-models     ← RHOAI model registry (Granite weights)
+#   2. loki-chunks      ← LokiStack log chunks backend
+#   3. langfuse-data    ← Langfuse blob storage
+#
+# WHY A JOB (not manual):
+#   Using a Kubernetes Job ensures bucket creation is:
+#   - Idempotent (re-running is safe — mc mb --ignore-existing)
+#   - Automated (no manual mc CLI steps needed)
+#   - Tracked (Job status visible in OCP console)
+#
+# HOW mc (MinIO Client) WORKS:
+#   mc alias set myminio http://minio:9000 admin <password>
+#   mc mb --ignore-existing myminio/rhoai-models
+#   Sets bucket policy to download (allows public read for models)
+#
+# TIMING: Runs after MinIO pod is Ready. Job completes in ~5 seconds.
+#
+# APPLY WITH:
+#   oc apply -f minio-init-job.yaml -n dark-noc-minio
+#
+# VERIFY:
+#   oc get job minio-init -n dark-noc-minio
+#   oc logs job/minio-init -n dark-noc-minio
+#   # Expected: 3 "Bucket created successfully" messages
+# =============================================================
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-init
+  namespace: dark-noc-minio
+  labels:
+    app: minio-init
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  template:
+    metadata:
+      labels:
+        app: minio-init
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        # Wait for MinIO to be ready before creating buckets
+        - name: wait-for-minio
+          image: curlimages/curl:8.10.0
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for MinIO to be ready..."
+              until curl -sf http://minio:9000/minio/health/ready; do
+                echo "MinIO not ready, retrying in 5s..."
+                sleep 5
+              done
+              echo "MinIO is ready!"
+      containers:
+        - name: minio-client
+          image: quay.io/minio/mc:RELEASE.2025-01-17T23-25-50Z
+          env:
+            # mc writes its config under $HOME/.mc; use a writable path for restricted SCC
+            - name: HOME
+              value: /tmp
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "=== MinIO Bucket Initialization ==="
+              echo "Configuring MinIO client alias..."
+              mc alias set myminio http://minio:9000 \
+                "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}" \
+                --api s3v4
+
+              echo "Creating bucket: rhoai-models (RHOAI model weights)"
+              mc mb --ignore-existing myminio/rhoai-models
+              mc anonymous set download myminio/rhoai-models
+
+              echo "Creating bucket: loki-chunks (LokiStack log storage)"
+              mc mb --ignore-existing myminio/loki-chunks
+
+              echo "Creating bucket: langfuse-data (Langfuse blobs)"
+              mc mb --ignore-existing myminio/langfuse-data
+
+              echo "=== Bucket verification ==="
+              mc ls myminio
+              echo "=== Init complete — 3 buckets created ==="
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi

@@ -1,0 +1,104 @@
+# =============================================================
+# pgvector PostgreSQL Cluster — RAG Knowledge Base
+# =============================================================
+# PURPOSE:
+#   Provides the vector database for the LangGraph agent's RAG
+#   (Retrieval-Augmented Generation) knowledge base.
+#   Stores embedded NOC runbooks and past incidents for
+#   context-augmented AI decision making.
+#
+# RAG KNOWLEDGE BASE CONTENTS:
+#   Table: documents (id, content, embedding vector(384), metadata)
+#   Seeded with: 10 NOC runbooks (nginx, OOMKilled, CrashLoopBackOff,
+#     network, storage, certificate, DNS, Kafka, PostgreSQL, AAP)
+#   Index: HNSW on embedding column (ivfflat for exact, hnsw for ANN)
+#
+# HOW THE AGENT USES IT:
+#   1. Incident log arrives (e.g., "nginx: OOMKilled")
+#   2. Agent embeds the log using MiniLM-L6-v2
+#   3. Vector search: SELECT * FROM documents
+#      ORDER BY embedding <-> $embed LIMIT 5
+#   4. Top 5 runbook excerpts added to LLM context window
+#   5. Granite 4.0 generates remediation with runbook context
+#
+# REQUIRES: pgvector-postgres:16.4-v0.8.1 image from BuildConfig
+#
+# APPLY WITH:
+#   oc apply -f pgvector-cluster.yaml -n dark-noc-rag
+#
+# VERIFY:
+#   oc get cluster pgvector-postgres -n dark-noc-rag
+#   oc exec -n dark-noc-rag pgvector-postgres-1 -- \
+#     psql -U noc_agent -d noc_rag -c "SELECT extname FROM pg_extension;"
+#   # Expected: vector
+# =============================================================
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pgvector-postgres
+  namespace: dark-noc-rag
+  labels:
+    app: pgvector-postgres
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+spec:
+  instances: 1
+  # Custom image with pgvector 0.8.1 compiled in
+  imageName: >-
+    image-registry.openshift-image-registry.svc:5000/dark-noc-rag/pgvector-postgres:16.4-v0.8.1
+
+  postgresql:
+    shared_preload_libraries:
+      - vector    # Load pgvector extension at startup
+    parameters:
+      max_connections: "100"
+      shared_buffers: "256MB"
+      effective_cache_size: "1GB"
+      maintenance_work_mem: "64MB"
+      work_mem: "4MB"
+      # Tuning for vector operations
+      max_parallel_workers_per_gather: "2"
+
+  bootstrap:
+    initdb:
+      database: noc_rag
+      owner: noc_agent
+      secret:
+        name: pgvector-superuser
+      postInitSQL:
+        - "CREATE EXTENSION IF NOT EXISTS vector;"
+        - |
+          CREATE TABLE IF NOT EXISTS documents (
+            id SERIAL PRIMARY KEY,
+            content TEXT NOT NULL,
+            embedding vector(384),
+            metadata JSONB DEFAULT '{}'
+          );
+        - "CREATE INDEX IF NOT EXISTS documents_embedding_hnsw ON documents USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);"
+        - "GRANT ALL ON documents TO noc_agent;"
+        - "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO noc_agent;"
+
+  storage:
+    size: 20Gi
+    storageClass: gp3-csi
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgvector-superuser
+  namespace: dark-noc-rag
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+type: Opaque
+stringData:
+  username: "noc_agent"
+  password: "<CHANGE-ME-PGVECTOR-POSTGRES-PASSWORD>"

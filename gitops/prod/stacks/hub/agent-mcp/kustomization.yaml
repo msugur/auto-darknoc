@@ -1,0 +1,60 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/agent-mcp
+patches:
+  - target:
+      kind: Deployment
+      name: mcp-openshift
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-openshift-gitsha
+  - target:
+      kind: Deployment
+      name: mcp-lokistack
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-lokistack-gitsha
+  - target:
+      kind: Deployment
+      name: mcp-kafka
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-kafka-gitsha
+  - target:
+      kind: Deployment
+      name: mcp-aap
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-aap-gitsha
+  - target:
+      kind: Deployment
+      name: mcp-slack
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-slack-gitsha
+      - op: replace
+        path: /spec/template/spec/containers/0/env/2/value
+        value: "#demos"
+  - target:
+      kind: Deployment
+      name: mcp-servicenow
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:mcp-servicenow-gitsha
+      - op: replace
+        path: /spec/template/spec/containers/0/env/8/value
+        value: "#demos"
+  - target:
+      kind: Deployment
+      name: dark-noc-agent
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: quay.io/msugur/auto-darknoc:agent-gitsha

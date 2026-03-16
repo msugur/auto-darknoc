@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: auto-darknoc-prod-root
+  namespace: openshift-gitops
+spec:
+  project: auto-darknoc-prod
+  source:
+    repoURL: https://github.com/msugur/auto-darknoc.git
+    targetRevision: main
+    path: gitops/prod/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true

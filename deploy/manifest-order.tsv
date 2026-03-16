@@ -1,0 +1,76 @@
+id	phase	cluster	action	path	notes
+001	bootstrap	hub	script	scripts/preflight.sh	Run once after env setup
+002	foundation	hub	apply	implementation/phase-01-foundation/namespaces/hub-namespaces.yaml	Create hub namespaces
+003	foundation	edge	apply	implementation/phase-01-foundation/namespaces/edge-namespaces.yaml	Create edge namespace
+004	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-0-nfd-subscription.yaml	Wave0 dependency
+005	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-0-certmanager-subscription.yaml	Wave0 dependency
+006	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-0-servicemesh-subscription.yaml	Wave0 dependency
+007	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-0-gpu-operator-subscription.yaml	Wave0 dependency
+008	foundation	hub	manual	implementation/phase-01-foundation/machineset/check-machineset.sh	Fill MachineSet placeholders
+009	foundation	hub	apply	implementation/phase-01-foundation/machineset/gpu-worker-machineset.yaml	Add GPU worker
+010	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-rhoai-subscription.yaml	Wave1 platform
+011	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-kafka-subscription.yaml	Wave1 platform
+012	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-acm-subscription.yaml	Wave1 platform
+013	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-aap-subscription.yaml	Wave1 platform
+014	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-logging-subscription.yaml	Wave1 platform
+015	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-loki-subscription.yaml	Wave1 platform
+016	foundation	hub	apply	implementation/phase-01-foundation/operators/wave-1-cloudnativepg-subscription.yaml	Wave1 platform
+017	foundation	edge	apply	implementation/phase-01-foundation/operators/edge-logging-subscription.yaml	Edge logging operator
+018	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/minio/minio-pvc.yaml	MinIO storage
+019	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/minio/minio-deployment.yaml	MinIO service
+020	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/minio/minio-init-job.yaml	Create buckets
+021	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/kafka/kafka-cluster.yaml	Kafka KRaft
+022	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/kafka/kafka-topics.yaml	Topics
+023	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/postgresql/langfuse-postgres-cluster.yaml	Langfuse DB
+024	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/postgresql/pgvector-buildconfig.yaml	Build pgvector image
+025	data-pipeline	hub	manual	implementation/phase-02-data-pipeline/postgresql/pgvector-buildconfig.yaml	Run start-build for pgvector image
+026	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/postgresql/pgvector-cluster.yaml	RAG DB
+027	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/langfuse/redis-deployment.yaml	Langfuse Redis
+028	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/langfuse/clickhouse-deployment.yaml	Langfuse ClickHouse
+029	data-pipeline	hub	manual	implementation/phase-02-data-pipeline/langfuse/langfuse-secrets.yaml	Fill secrets first
+030	data-pipeline	hub	helm	implementation/phase-02-data-pipeline/langfuse/langfuse-values.yaml	Helm install/upgrade Langfuse
+031	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/langfuse/langfuse-route.yaml	Langfuse route
+032	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/logging/lokistack-hub.yaml	LokiStack
+033	data-pipeline	hub	apply	implementation/phase-02-data-pipeline/logging/clusterlogging-hub.yaml	Hub collection
+034	data-pipeline	edge	apply	implementation/phase-02-data-pipeline/logging/clusterlogforwarder-edge.yaml	Edge->Hub forwarding
+035	ai-core	hub	apply	implementation/phase-03-ai-core/rhoai/datasciencecluster.yaml	Activate RHOAI components
+036	ai-core	hub	apply	implementation/phase-03-ai-core/rhoai/hardware-profile.yaml	GPU profile
+037	ai-core	hub	apply	implementation/phase-03-ai-core/vllm/vllm-inferenceservice.yaml	Serve Granite
+038	ai-core	hub	apply	implementation/phase-03-ai-core/llamastack/llamastack-distribution.yaml	LlamaStack distribution
+039	ai-core	hub	manual	implementation/phase-03-ai-core/rag/seed-knowledge-base.py	Seed local runbooks into pgvector
+040	ai-core	hub	manual	implementation/phase-03-ai-core/rag/documentation-sources.yaml	Review docs sources list
+041	ai-core	hub	manual	implementation/phase-03-ai-core/rag/seed-product-docs.py	Seed product docs into pgvector
+042	ai-core	hub	apply	implementation/phase-03-ai-core/rag/rag-docs-seed-job.yaml	Optional in-cluster docs seeding job
+043	automation	hub	apply	implementation/phase-04-automation/aap/automation-controller.yaml	AAP Controller
+044	automation	hub	apply	implementation/phase-04-automation/aap/eda-controller.yaml	Hub EDA
+045	automation	hub	apply	implementation/phase-04-automation/aap/eda-rulebook.yaml	Hub EDA rules
+046	automation	hub	apply	implementation/phase-04-automation/aap/aap-platform.yaml	Enterprise AAP platform
+047	automation	hub	apply	implementation/phase-04-automation/acm/multiclusterhub.yaml	ACM hub
+048	automation	hub	apply	implementation/phase-04-automation/acm/managed-cluster.yaml	Edge enrollment
+049	automation	hub	manual	implementation/phase-04-automation/playbooks/restart-nginx.yaml	Sync playbooks into AAP project
+050	automation	hub	manual	implementation/phase-04-automation/playbooks/restart-nginx-aap-api.yaml	Alternative API-driven playbook
+051	automation	hub	manual	implementation/phase-04-automation/aap/lightspeed-demo-template.md	Create/update lightspeed-generate-and-run template
+052	automation	edge	apply	implementation/phase-04-automation/edge-eda/edge-eda-rulebook.yaml	Optional edge local EDA rules
+053	automation	edge	apply	implementation/phase-04-automation/edge-eda/edge-eda-runner-deployment.yaml	Optional edge EDA runner
+054	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-openshift/Dockerfile	Build mcp-openshift image
+055	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-lokistack/Dockerfile	Build mcp-lokistack image
+056	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-kafka/Dockerfile	Build mcp-kafka image
+057	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-aap/Dockerfile	Build mcp-aap image
+058	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-slack/Dockerfile	Build mcp-slack image
+059	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/mcp-servers/mcp-servicenow/Dockerfile	Build mcp-servicenow image
+060	agent-mcp	hub	apply	implementation/phase-05-agent-mcp/mcp-servers/mcp-servers-deployment.yaml	Deploy all MCP servers
+061	agent-mcp	hub	apply	implementation/phase-05-agent-mcp/agent/buildconfig.yaml	Agent build objects
+062	agent-mcp	hub	manual	implementation/phase-05-agent-mcp/agent/Dockerfile	Build dark-noc-agent image
+063	agent-mcp	hub	apply	implementation/phase-05-agent-mcp/agent/deployment.yaml	Deploy agent
+064	dashboard	hub	manual	implementation/phase-06-dashboard/servicenow-mock/Dockerfile	Build ServiceNow mock image
+065	dashboard	hub	apply	implementation/phase-06-dashboard/servicenow-mock/deployment.yaml	Deploy ServiceNow mock
+066	dashboard	hub	manual	implementation/phase-06-dashboard/chatbot/Dockerfile	Build chatbot image
+067	dashboard	hub	apply	implementation/phase-06-dashboard/chatbot/deployment.yaml	Deploy chatbot API
+068	dashboard	hub	apply	implementation/phase-06-dashboard/dashboard/buildconfig.yaml	Create dashboard ImageStream + BuildConfig
+068a	dashboard	hub	manual	implementation/phase-06-dashboard/dashboard/buildconfig.yaml	Run start-build for dashboard image
+069	dashboard	hub	apply	implementation/phase-06-dashboard/dashboard/deployment.yaml	Deploy dashboard UI
+070	edge-workloads	edge	apply	implementation/phase-07-edge-workloads/nginx/nginx-deployment.yaml	Deploy edge workload
+071	edge-workloads	edge	apply	implementation/phase-07-edge-workloads/failure-simulator/failure-cronjob.yaml	Deploy failure simulator
+072	validation	hub	script	implementation/phase-08-validation/test-scenarios.sh	Run E2E scenarios
+073	validation	hub	script	scripts/validate-demo.sh	Repo and config validation
+074	validation	hub	manual	docs/deployment/redeploy-runbook.md	Final acceptance checklist
