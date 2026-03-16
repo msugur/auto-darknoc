@@ -8,5 +8,6 @@ resources:
   - langfuse-postgres-cluster.yaml
   - langfuse-route.yaml
   - lokistack-hub.yaml
+  - pgvector-buildconfig.yaml
   - pgvector-cluster.yaml
   - redis-deployment.yaml
