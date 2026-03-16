@@ -1,0 +1,129 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: langfuse-hub
+  namespace: openshift-gitops
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: auto-darknoc-prod
+  source:
+    repoURL: https://langfuse.github.io/langfuse-k8s
+    chart: langfuse
+    targetRevision: 1.5.22
+    helm:
+      releaseName: langfuse
+      values: |
+        langfuse:
+          image:
+            tag: "3.155.1"
+            pullPolicy: IfNotPresent
+          features:
+            telemetryEnabled: false
+            signUpDisabled: false
+          additionalEnv:
+            - name: REDIS_HOST
+              value: redis.dark-noc-observability.svc
+            - name: REDIS_PORT
+              value: "6379"
+          web:
+            service:
+              type: ClusterIP
+              port: 3000
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 1Gi
+          worker:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+          salt:
+            secretKeyRef:
+              name: langfuse-secrets
+              key: SALT
+          encryptionKey:
+            secretKeyRef:
+              name: langfuse-secrets
+              key: ENCRYPTION_KEY
+          nextauth:
+            url: "https://langfuse-dark-noc-observability.apps.ocp.ms2b2.sandbox2859.opentlc.com"
+            secret:
+              secretKeyRef:
+                name: langfuse-secrets
+                key: NEXTAUTH_SECRET
+        postgresql:
+          deploy: false
+          host: langfuse-postgres-rw.dark-noc-observability.svc
+          port: 5432
+          auth:
+            username: langfuse
+            database: langfuseapp
+            existingSecret: langfuse-secrets
+            secretKeys:
+              userPasswordKey: DATABASE_PASSWORD
+        redis:
+          deploy: false
+          host: redis.dark-noc-observability.svc
+          port: 6379
+          auth:
+            username: null
+            existingSecret: langfuse-secrets
+            existingSecretPasswordKey: REDIS_PASSWORD
+        clickhouse:
+          deploy: false
+          host: clickhouse.dark-noc-observability.svc
+          httpPort: 8123
+          nativePort: 9000
+          database: langfuse
+          auth:
+            username: langfuse
+            existingSecret: langfuse-secrets
+            existingSecretKey: CLICKHOUSE_PASSWORD
+          clusterEnabled: false
+        s3:
+          deploy: false
+          storageProvider: s3
+          bucket: langfuse-data
+          region: us-east-1
+          endpoint: http://minio.dark-noc-minio.svc:9000
+          forcePathStyle: true
+          accessKeyId:
+            secretKeyRef:
+              name: langfuse-secrets
+              key: S3_ACCESS_KEY_ID
+          secretAccessKey:
+            secretKeyRef:
+              name: langfuse-secrets
+              key: S3_SECRET_ACCESS_KEY
+          mediaUpload:
+            enabled: true
+            bucket: langfuse-data
+            endpoint: http://minio.dark-noc-minio.svc:9000
+            region: us-east-1
+            forcePathStyle: true
+            accessKeyId:
+              secretKeyRef:
+                name: langfuse-secrets
+                key: S3_ACCESS_KEY_ID
+            secretAccessKey:
+              secretKeyRef:
+                name: langfuse-secrets
+                key: S3_SECRET_ACCESS_KEY
+  destination:
+    name: in-cluster
+    namespace: dark-noc-observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true

@@ -12,4 +12,5 @@ resources:
   - agent-mcp-hub.yaml
   - ui-hub.yaml
   - observability-hub.yaml
+  - langfuse-hub.yaml
   - notifications-hub.yaml
