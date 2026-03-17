@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-router-to-langfuse-web
+  namespace: dark-noc-observability
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+      app.kubernetes.io/instance: langfuse
+      app.kubernetes.io/name: langfuse
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 3000
