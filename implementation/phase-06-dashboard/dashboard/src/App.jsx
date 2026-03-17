@@ -50,6 +50,34 @@ export default function App() {
     ];
   }, [integrations.eda_usage?.workflow]);
 
+  const liveSlo = useMemo(() => {
+    const items = integrations.integrations || [];
+    const total = items.length || 0;
+    const up = items.filter((item) => item.status === "up").length;
+    const availability = total > 0 ? (up / total) * 100 : 0;
+
+    const mcpItems = items.filter((item) => item.group === "mcp");
+    const mcpTotal = mcpItems.length || 0;
+    const mcpUp = mcpItems.filter((item) => item.status === "up").length;
+    const mcpAvailability = mcpTotal > 0 ? (mcpUp / mcpTotal) * 100 : 0;
+
+    const servicenowUp = String(summary.servicenow || "").toLowerCase() === "up";
+    const incidentLoad = Number(summary.open_incidents || 0);
+
+    return {
+      availability,
+      availabilityTarget: 99.0,
+      availabilityPass: availability >= 99.0,
+      mcpAvailability,
+      mcpTarget: 100,
+      mcpPass: mcpAvailability >= 100,
+      servicenowUp,
+      incidentLoad,
+      incidentBudget: 5,
+      incidentPass: incidentLoad <= 5
+    };
+  }, [integrations.integrations, summary.servicenow, summary.open_incidents]);
+
   useEffect(() => {
     let active = true;
 
@@ -192,6 +220,49 @@ export default function App() {
               </a>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>Critical SLO (Live Data)</h2>
+        <p>Real-time SLO posture from live probes and incident feed.</p>
+        <div className="slo-grid">
+          <article className="slo-card">
+            <h3>Platform Availability</h3>
+            <p className="slo-metric">
+              {liveSlo.availability.toFixed(1)}%
+              <span className={liveSlo.availabilityPass ? "pill up" : "pill down"}>
+                target {liveSlo.availabilityTarget.toFixed(1)}%
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>MCP Mesh Health</h3>
+            <p className="slo-metric">
+              {liveSlo.mcpAvailability.toFixed(1)}%
+              <span className={liveSlo.mcpPass ? "pill up" : "pill down"}>
+                target {liveSlo.mcpTarget}%
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>ServiceNow Pipeline</h3>
+            <p className="slo-metric">
+              {liveSlo.servicenowUp ? "Up" : "Down"}
+              <span className={liveSlo.servicenowUp ? "pill up" : "pill down"}>
+                live check
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>Incident Load</h3>
+            <p className="slo-metric">
+              {liveSlo.incidentLoad}
+              <span className={liveSlo.incidentPass ? "pill up" : "pill down"}>
+                budget ≤ {liveSlo.incidentBudget}
+              </span>
+            </p>
+          </article>
         </div>
       </section>
 
