@@ -4,6 +4,7 @@ resources:
   - predeploy-hub.yaml
   - foundation-hub.yaml
   - foundation-edge.yaml
+  - edge-workloads.yaml
   - minio-hub.yaml
   - data-pipeline-hub.yaml
   - data-pipeline-edge.yaml

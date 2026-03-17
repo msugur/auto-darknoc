@@ -1,19 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: data-pipeline-edge
+  name: edge-workloads
   namespace: openshift-gitops
   annotations:
-    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   project: auto-darknoc-prod
   source:
     repoURL: https://github.com/msugur/auto-darknoc.git
     targetRevision: main
-    path: gitops/prod/stacks/edge/data-pipeline
+    path: gitops/prod/stacks/edge/workloads
   destination:
     name: edge-cluster
-    namespace: openshift-logging
+    namespace: dark-noc-edge
   syncPolicy:
     automated:
       prune: true

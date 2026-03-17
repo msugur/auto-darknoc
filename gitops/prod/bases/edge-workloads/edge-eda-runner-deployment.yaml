@@ -1,0 +1,191 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: edge-eda-runner
+  namespace: dark-noc-edge
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: edge-eda-runner
+  namespace: dark-noc-edge
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: edge-eda-runner
+  namespace: dark-noc-edge
+subjects:
+  - kind: ServiceAccount
+    name: edge-eda-runner
+    namespace: dark-noc-edge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: edge-eda-runner
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edge-eda-runner-script
+  namespace: dark-noc-edge
+data:
+  runner.py: |
+    #!/usr/bin/env python3
+    import json
+    import os
+    import subprocess
+    from datetime import datetime, timezone
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    NAMESPACE = os.getenv("EDGE_NAMESPACE", "dark-noc-edge")
+    DEPLOYMENT = os.getenv("EDGE_DEPLOYMENT", "nginx")
+    SITE = os.getenv("EDGE_SITE", "edge-01")
+
+    def now_utc() -> str:
+      return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def oc_patch(patch: str) -> tuple[int, str, str]:
+      cmd = [
+        "oc", "-n", NAMESPACE, "patch", "deployment", DEPLOYMENT,
+        "--type=json", "-p", patch,
+      ]
+      proc = subprocess.run(cmd, capture_output=True, text=True)
+      return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+
+    def remediate_oom() -> dict:
+      ts = now_utc()
+      patch = json.dumps([
+        {"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "128Mi"},
+        {"op": "replace", "path": "/spec/template/spec/containers/0/resources/requests/memory", "value": "64Mi"},
+        {"op": "add", "path": "/spec/template/metadata/annotations", "value": {"kubectl.kubernetes.io/restartedAt": ts}},
+      ])
+      rc, out, err = oc_patch(patch)
+      if rc != 0 and "already exists" in err:
+        patch = json.dumps([
+          {"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "128Mi"},
+          {"op": "replace", "path": "/spec/template/spec/containers/0/resources/requests/memory", "value": "64Mi"},
+          {"op": "replace", "path": "/spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt", "value": ts},
+        ])
+        rc, out, err = oc_patch(patch)
+
+      return {
+        "site": SITE,
+        "namespace": NAMESPACE,
+        "deployment": DEPLOYMENT,
+        "action": "local_fast_path_restart",
+        "result": "success" if rc == 0 else "failed",
+        "timestamp": ts,
+        "stdout": out,
+        "stderr": err,
+      }
+
+    class Handler(BaseHTTPRequestHandler):
+      def do_POST(self):
+        if self.path != "/endpoint":
+          self.send_response(404)
+          self.end_headers()
+          self.wfile.write(b'{"error":"not found"}')
+          return
+
+        length = int(self.headers.get("Content-Length", "0"))
+        payload = {}
+        if length > 0:
+          body = self.rfile.read(length).decode("utf-8")
+          payload = json.loads(body or "{}")
+
+        failure_type = str(payload.get("failure_type", "")).lower()
+        namespace = payload.get("namespace", NAMESPACE)
+
+        if "oomkilled" in failure_type and namespace == NAMESPACE:
+          result = remediate_oom()
+          print(json.dumps({"event": payload, "remediation": result}), flush=True)
+          code = 200 if result["result"] == "success" else 500
+          self.send_response(code)
+          self.send_header("Content-Type", "application/json")
+          self.end_headers()
+          self.wfile.write(json.dumps(result).encode("utf-8"))
+          return
+
+        self.send_response(202)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"ignored": True, "event": payload}).encode("utf-8"))
+
+      def log_message(self, fmt, *args):
+        print(f"edge-eda-runner: {fmt % args}", flush=True)
+
+    if __name__ == "__main__":
+      print(f"edge-eda-runner listening on 0.0.0.0:5000 site={SITE}", flush=True)
+      HTTPServer(("0.0.0.0", 5000), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-eda-runner
+  namespace: dark-noc-edge
+  labels:
+    app: edge-eda-runner
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edge-eda-runner
+  template:
+    metadata:
+      labels:
+        app: edge-eda-runner
+    spec:
+      serviceAccountName: edge-eda-runner
+      containers:
+        - name: runner
+          image: quay.io/openshift/origin-cli:4.21
+          imagePullPolicy: IfNotPresent
+          command: ["python3", "/runner/runner.py"]
+          env:
+            - name: EDGE_NAMESPACE
+              value: dark-noc-edge
+            - name: EDGE_DEPLOYMENT
+              value: nginx
+            - name: EDGE_SITE
+              value: edge-01
+          ports:
+            - containerPort: 5000
+              name: webhook
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: runner-script
+              mountPath: /runner
+      volumes:
+        - name: runner-script
+          configMap:
+            name: edge-eda-runner-script
+            defaultMode: 0555
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-eda-runner
+  namespace: dark-noc-edge
+spec:
+  selector:
+    app: edge-eda-runner
+  ports:
+    - name: webhook
+      port: 5000
+      targetPort: 5000
