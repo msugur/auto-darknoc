@@ -46,7 +46,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable           # stable channel tracks 3.x releases
+  channel: stable-3.3       # pin OpenShift AI 3.3 stream
   installPlanApproval: Automatic
   name: rhods-operator
   source: redhat-operators
