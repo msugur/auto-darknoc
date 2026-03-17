@@ -51,6 +51,13 @@ export function ChatPanel({ apiBase }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: outgoing, session_id: sessionId })
       });
+      if (!res.ok) {
+        throw new Error(`Chat request failed (${res.status})`);
+      }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Chat request returned non-JSON response (${res.status})`);
+      }
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "assistant", text: data.reply || "No response" }]);
       setMeta(data);
@@ -65,8 +72,9 @@ export function ChatPanel({ apiBase }) {
           total: data.integrations_total || 0
         });
       }
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Chatbot endpoint unreachable." }]);
+    } catch (err) {
+      const detail = err?.message || "Chatbot endpoint unreachable.";
+      setMessages((prev) => [...prev, { role: "assistant", text: detail }]);
     } finally {
       setLoading(false);
     }

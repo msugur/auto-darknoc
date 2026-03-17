@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import statistics
+import time
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -105,9 +106,11 @@ DEMO_TOPIC = os.getenv("DEMO_TOPIC", "nginx-logs")
 SLO_AUDIT_TOPIC = os.getenv("SLO_AUDIT_TOPIC", "incident-audit")
 SLO_LOOKBACK_HOURS = int(os.getenv("SLO_LOOKBACK_HOURS", "24"))
 SLO_MAX_MESSAGES = int(os.getenv("SLO_MAX_MESSAGES", "500"))
+INTEGRATIONS_CACHE_TTL_SECONDS = float(os.getenv("INTEGRATIONS_CACHE_TTL_SECONDS", "10"))
 
 chat_sessions: dict[str, list[dict[str, str]]] = {}
 EXEC_REPLY_MAX_CHARS = 1600
+integrations_cache: dict[str, Any] = {"ts": 0.0, "payload": None}
 
 app = FastAPI(
     title="Dark NOC Chatbot API",
@@ -562,8 +565,7 @@ async def summary() -> dict:
     }
 
 
-@app.get("/api/integrations")
-async def integrations() -> dict:
+async def _build_integrations_payload() -> dict[str, Any]:
     snow_probe = (
         f"{SERVICENOW_URL}/api/now/table/incident?sysparm_limit=1"
         if is_real_servicenow()
@@ -789,6 +791,28 @@ async def integrations() -> dict:
     }
 
 
+async def get_integrations_payload(force_refresh: bool = False) -> dict[str, Any]:
+    now = time.time()
+    cached_payload = integrations_cache.get("payload")
+    cached_ts = float(integrations_cache.get("ts", 0.0) or 0.0)
+    if (
+        not force_refresh
+        and cached_payload is not None
+        and (now - cached_ts) <= INTEGRATIONS_CACHE_TTL_SECONDS
+    ):
+        return cached_payload
+
+    payload = await _build_integrations_payload()
+    integrations_cache["payload"] = payload
+    integrations_cache["ts"] = now
+    return payload
+
+
+@app.get("/api/integrations")
+async def integrations(force_refresh: bool = False) -> dict:
+    return await get_integrations_payload(force_refresh=force_refresh)
+
+
 @app.post("/api/demo/trigger")
 async def trigger_demo(req: DemoTriggerRequest) -> dict:
     event = build_demo_event(req.scenario, req.site)
@@ -835,7 +859,7 @@ async def chat(req: ChatRequest) -> dict:
     session_id = normalize_session_id(req.session_id)
     history = chat_sessions.setdefault(session_id, [])
     summary_payload = await summary()
-    integrations_payload = await integrations()
+    integrations_payload = await get_integrations_payload(force_refresh=False)
 
     model_prompt = build_context_message(msg, summary_payload, integrations_payload, history)
     raw_model_reply, model_source = await call_live_model(model_prompt)
