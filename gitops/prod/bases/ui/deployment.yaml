@@ -128,6 +128,8 @@ spec:
               value: "use-token-login"
             - name: AAP_UI_URL
               value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: AAP_LIGHTSPEED_URL
+              value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com/#/templates"
             - name: AAP_UI_USERNAME
               value: "admin"
             - name: AAP_UI_PASSWORD
@@ -146,6 +148,10 @@ spec:
               value: "redhat"
             - name: KAFKA_UI_URL
               value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod"
+            - name: KAFKA_UI_USERNAME
+              value: "admin"
+            - name: KAFKA_UI_PASSWORD
+              value: "use-cluster-admin-login"
             - name: LOKI_UI_URL
               value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/monitoring/logs"
             - name: AI_MODEL_NAME

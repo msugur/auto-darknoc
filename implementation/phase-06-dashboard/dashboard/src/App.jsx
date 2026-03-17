@@ -349,9 +349,14 @@ export default function App() {
           <text x="404" y="348" className="node-text">Observability + Context Layer</text>
           <text x="404" y="369" className="node-subtext">LokiStack alerts/logs, Langfuse traces, pgvector RAG, OpenShift telemetry</text>
 
-          <rect x="48" y="406" width="1264" height="62" rx="12" className="node platform-layer" />
-          <text x="64" y="430" className="node-text">Platform Cake Layer</text>
-          <text x="64" y="450" className="node-subtext">OpenShift 4.18+ (Hub + Edge) · OpenShift AI 3.3 · AWS Infra Nodes · NVIDIA GPU Runtime</text>
+          <rect x="48" y="404" width="1264" height="20" rx="8" className="node platform-layer" />
+          <text x="64" y="418" className="node-subtext">Top Layer: OpenShift AI 3.3 + OpenShift Workloads (LangGraph, LlamaStack, vLLM, AAP, MCP)</text>
+
+          <rect x="48" y="428" width="1264" height="20" rx="8" className="node platform-layer-mid" />
+          <text x="64" y="442" className="node-subtext">Middle Layer: Red Hat OpenShift Platform (Hub + Edge clusters, Operators, Security, Routing)</text>
+
+          <rect x="48" y="452" width="1264" height="20" rx="8" className="node platform-layer-base" />
+          <text x="64" y="466" className="node-subtext">Base Layer: AWS Infrastructure (compute, storage, networking, GPU-capable nodes)</text>
 
           <rect x="946" y="126" width="170" height="72" rx="12" className="node" />
           <text x="962" y="152" className="node-text">ServiceNow</text>
