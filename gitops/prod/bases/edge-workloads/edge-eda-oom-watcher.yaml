@@ -13,6 +13,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -45,6 +48,7 @@ data:
     NS = os.getenv("EDGE_NAMESPACE", "dark-noc-edge")
     LABEL = os.getenv("EDGE_LABEL", "app=nginx")
     RUNNER_URL = os.getenv("EDGE_EDA_RUNNER_URL", "http://edge-eda-runner.dark-noc-edge.svc:5000/endpoint")
+    DEPLOYMENT = os.getenv("EDGE_DEPLOYMENT", "nginx")
 
     seen = set()
 
@@ -64,6 +68,25 @@ data:
         body = resp.read().decode("utf-8")
         print(f"edge-eda-oom-watcher: posted {payload} status={resp.status} body={body}", flush=True)
 
+    def deployment_memory_limit_mi():
+      cmd = ["oc", "-n", NS, "get", "deployment", DEPLOYMENT, "-o", "json"]
+      out = subprocess.check_output(cmd, text=True)
+      dep = json.loads(out)
+      mem = (
+        dep.get("spec", {})
+        .get("template", {})
+        .get("spec", {})
+        .get("containers", [{}])[0]
+        .get("resources", {})
+        .get("limits", {})
+        .get("memory", "")
+      )
+      if mem.endswith("Mi"):
+        return int(mem[:-2])
+      if mem.endswith("Gi"):
+        return int(mem[:-2]) * 1024
+      return None
+
     def pod_oom_event_key(pod):
       name = pod.get("metadata", {}).get("name", "")
       statuses = pod.get("status", {}).get("containerStatuses", [])
@@ -75,6 +98,17 @@ data:
 
     while True:
       try:
+        limit_mi = deployment_memory_limit_mi()
+        threshold_key = f"unsafe-limit:{limit_mi}"
+        if limit_mi is not None and limit_mi <= 32 and threshold_key not in seen:
+          seen.add(threshold_key)
+          post_event({
+            "failure_type": "OOMKilled",
+            "namespace": NS,
+            "deployment": DEPLOYMENT,
+            "reason": f"unsafe-memory-limit-{limit_mi}Mi",
+          })
+
         for pod in get_pods():
           key = pod_oom_event_key(pod)
           if key and key not in seen:
@@ -113,6 +147,8 @@ spec:
               value: dark-noc-edge
             - name: EDGE_LABEL
               value: app=nginx
+            - name: EDGE_DEPLOYMENT
+              value: nginx
             - name: EDGE_EDA_RUNNER_URL
               value: http://edge-eda-runner.dark-noc-edge.svc:5000/endpoint
           resources:
