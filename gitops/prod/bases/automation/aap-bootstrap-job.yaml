@@ -1,0 +1,149 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aap-bootstrap-content
+  namespace: aap
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: bootstrap
+          image: python:3.11-alpine
+          env:
+            - name: CONTROLLER_URL
+              value: "http://aap-enterprise-controller-service.aap.svc"
+            - name: AAP_USERNAME
+              value: "admin"
+            - name: AAP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aap-enterprise-controller-admin-password
+                  key: password
+            - name: DEMO_SCM_URL
+              value: "https://github.com/ansible/ansible-tower-samples"
+            - name: DEMO_SCM_BRANCH
+              value: "master"
+          command:
+            - python
+            - -c
+            - |
+              import base64
+              import json
+              import os
+              import ssl
+              import urllib.parse
+              import urllib.request
+
+              base = os.environ['CONTROLLER_URL'].rstrip('/')
+              api = f"{base}/api/controller/v2"
+              user = os.environ['AAP_USERNAME']
+              pw = os.environ['AAP_PASSWORD']
+              scm_url = os.environ['DEMO_SCM_URL']
+              scm_branch = os.environ['DEMO_SCM_BRANCH']
+
+              token = base64.b64encode(f"{user}:{pw}".encode()).decode()
+              headers = {
+                  "Authorization": f"Basic {token}",
+                  "Content-Type": "application/json",
+              }
+              ctx = ssl._create_unverified_context()
+
+              def req(method, url, payload=None):
+                  data = None
+                  if payload is not None:
+                      data = json.dumps(payload).encode()
+                  r = urllib.request.Request(url, data=data, headers=headers, method=method)
+                  with urllib.request.urlopen(r, context=ctx, timeout=45) as resp:
+                      return json.loads(resp.read().decode() or "{}")
+
+              def get(endpoint, qs=None):
+                  url = f"{api}/{endpoint}/"
+                  if qs:
+                      url += "?" + urllib.parse.urlencode(qs)
+                  return req("GET", url)
+
+              def post(endpoint, payload):
+                  return req("POST", f"{api}/{endpoint}/", payload)
+
+              def patch(endpoint, obj_id, payload):
+                  return req("PATCH", f"{api}/{endpoint}/{obj_id}/", payload)
+
+              def by_name(endpoint, name):
+                  results = get(endpoint, {"name": name}).get("results", [])
+                  return results[0] if results else None
+
+              def ensure_project(name):
+                  p = by_name("projects", name)
+                  if not p:
+                      p = post("projects", {
+                          "name": name,
+                          "organization": 1,
+                          "scm_type": "git",
+                          "scm_url": scm_url,
+                          "scm_branch": scm_branch,
+                          "scm_update_on_launch": True,
+                      })
+                      print(f"created project {name}: {p.get('id')}")
+                  else:
+                      print(f"existing project {name}: {p.get('id')}")
+
+                  try:
+                      req("POST", f"{api}/projects/{p['id']}/update/", {})
+                  except Exception as e:
+                      print(f"project update trigger warning: {e}")
+                  return int(p["id"])
+
+              def ensure_inventory(name):
+                  inv = by_name("inventories", name)
+                  if not inv:
+                      inv = post("inventories", {"name": name, "organization": 1})
+                      print(f"created inventory {name}: {inv.get('id')}")
+                  else:
+                      print(f"existing inventory {name}: {inv.get('id')}")
+
+                  hosts = get("hosts", {"name": "localhost", "inventory": int(inv["id"])}).get("results", [])
+                  if not hosts:
+                      post("hosts", {
+                          "name": "localhost",
+                          "inventory": int(inv["id"]),
+                          "variables": "ansible_connection: local",
+                      })
+                      print("added localhost host")
+                  return int(inv["id"])
+
+              def ensure_template(name, project_id, inventory_id, playbook):
+                  jt = by_name("job_templates", name)
+                  payload = {
+                      "name": name,
+                      "job_type": "run",
+                      "project": project_id,
+                      "inventory": inventory_id,
+                      "playbook": playbook,
+                      "ask_variables_on_launch": True,
+                  }
+                  if not jt:
+                      jt = post("job_templates", payload)
+                      print(f"created template {name}: {jt.get('id')}")
+                  else:
+                      patch("job_templates", int(jt["id"]), payload)
+                      print(f"updated template {name}: {jt.get('id')}")
+                  return int(jt["id"])
+
+              project_id = ensure_project("Demo Project")
+              inventory_id = ensure_inventory("Demo Inventory")
+              hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
+              ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
+
+              jobs = get("jobs", {"job_template": hello_id}).get("count", 0)
+              if int(jobs) == 0:
+                  j = req("POST", f"{api}/job_templates/{hello_id}/launch/", {})
+                  print(f"launched demo job {j.get('id')}")
+              else:
+                  print(f"demo job already exists: {jobs}")
+
+              print("bootstrap complete")

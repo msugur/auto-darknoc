@@ -215,7 +215,11 @@ spec:
             - name: PORT
               value: "8004"
             - name: AAP_URL
-              value: "http://aap-service.aap.svc"
+              value: "http://aap-enterprise-controller-service.aap.svc"
+            - name: AAP_API_PREFIX
+              value: "/api/controller/v2"
+            - name: AAP_VERIFY_SSL
+              value: "false"
             - name: AAP_USERNAME
               value: "admin"
             - name: AAP_PASSWORD

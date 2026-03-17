@@ -27,6 +27,7 @@ mcp = FastMCP(
 )
 
 AAP_URL = os.getenv("AAP_URL", "https://aap.aap.svc")
+AAP_API_PREFIX = os.getenv("AAP_API_PREFIX", "/api/v2")
 AAP_USERNAME = os.getenv("AAP_USERNAME", "admin")
 AAP_PASSWORD = os.getenv("AAP_PASSWORD", "redhat")
 AAP_VERIFY_SSL = os.getenv("AAP_VERIFY_SSL", "false").lower() == "true"
@@ -34,8 +35,10 @@ AAP_VERIFY_SSL = os.getenv("AAP_VERIFY_SSL", "false").lower() == "true"
 
 def aap_client() -> httpx.Client:
     """Create an authenticated httpx client for AAP REST API."""
+    base = AAP_URL.rstrip("/")
+    prefix = "/" + AAP_API_PREFIX.strip("/")
     return httpx.Client(
-        base_url=f"{AAP_URL}/api/v2",
+        base_url=f"{base}{prefix}",
         auth=(AAP_USERNAME, AAP_PASSWORD),
         verify=AAP_VERIFY_SSL,
         timeout=30,
