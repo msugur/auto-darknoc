@@ -48,7 +48,9 @@ spec:
         url: "tls://REPLACE-WITH-HUB-KAFKA-BOOTSTRAP-HOST:443"
         topic: nginx-logs
       tls:
-        insecureSkipVerify: true
+        ca:
+          secretName: dark-noc-kafka-cluster-ca-cert
+          key: ca.crt
   pipelines:
     - name: nginx-to-kafka
       inputRefs:

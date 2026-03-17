@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dark-noc-kafka-cluster-ca-cert
+  namespace: openshift-logging
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/cluster: edge
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIFLTCCAxWgAwIBAgIUAbNdvk1lbBsMlpbP+HuD9RWrblowDQYJKoZIhvcNAQEN
+    BQAwLTETMBEGA1UECgwKaW8uc3RyaW16aTEWMBQGA1UEAwwNY2x1c3Rlci1jYSB2
+    MDAeFw0yNjAzMTYxODE2MjJaFw0yNzAzMTYxODE2MjJaMC0xEzARBgNVBAoMCmlv
+    LnN0cmltemkxFjAUBgNVBAMMDWNsdXN0ZXItY2EgdjAwggIiMA0GCSqGSIb3DQEB
+    AQUAA4ICDwAwggIKAoICAQCsrqM5pysIJCYOoJEZBCtUnhTB5eeMK/cosVc9A3rY
+    z/E6jcVHQhT3LAX/uNqRx7oF+frLm25KnTrIJnDnA0X3T720EWEqc0xjNpzXTHm3
+    uPZtqYaKU9ggBUfSHse/gI8Z0CQV/KZ7zKO+xtbTGPyWHRQcnFLI8vuJT1MfwKEi
+    Q1RWnnMM+TRQG/wKBIPFy1m87lgiWpKmeldTwXuC5Lyam8+KZL8AUFpMWItk5Uvq
+    rEEGX7qXVRNwBcF9QiPN+hUDNR85Go2yYP3P1wovuaZHw+ExJ/zA2vfBS8nPC2dZ
+    MMizslmTz6NsSbZdJoJzKxKt4vpKM1dM+zg9RRcozhi2pTxF3i0uu16fyFkGqbzM
+    FmoptogbrYAYQPyyCuoCD4KSfIqAS+CcUgwM1gzfZMaUdkwuFPQhKPdV2niFfsBh
+    nKj8xDgt1rO89XuhpQd56eWMqjzBvQrNYA7i4Niwgf9yCXvK62hHc2dwVNSJ6LzZ
+    /0xRSeF1DhVJSYSCYGiDij2BOOC8p0gZUWbcEXqygVnYBEV1gFcU5msxqhunnzNH
+    66wTP2HaMP4V8H+m/x0GZD4KFB2RH57X6frOd4vwQ86n0D91FVVb+N1jt1XSFPOE
+    lzTqIuV7gd1z+o44AtlFexzTle7qG96plcfjPhUxtPNm6uftuBfSiwt+n1sVA9QX
+    nQIDAQABo0UwQzAdBgNVHQ4EFgQURHUUf2/+oihGcPWhzu5qOdOa+MEwEgYDVR0T
+    AQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAQYwDQYJKoZIhvcNAQENBQADggIB
+    AHYSjHEAz3Sc51CkpChyqYntiOQGP3cnCei6oO1GbFLBcFI05SrOw+4KO8p9SAP1
+    U6qJCfI7KEBqBTxp/89ZboPVwUfAXJYCN0G4gdFLObIWa40w8mj5soySOVqiKSwi
+    5hhGWRft2384pcDGVJ+H/O18wP63pd+UtYQVbL38Tj4qy4CnmhTbDgZlGHCX1cr3
+    ssJfBXuQjYiuXPmzkfXOP9VWY6XV9hdaIWbZjxLe6s7uesdxzrHS9M6YF+qgElN2
+    TSLly6i5YgZHDTVYcZAvoVWU4rLz9tHTdRfJmtcD1APvQSBiljJXHkKHrRPGp4Cp
+    ATKS42Ovl35HKfMu9U9s+vjmu6ov2+yqGF/1cttr6VAVZ7HUrSdsY0xTtNsYvYMH
+    Y724QPKDlDdQkSOtNQuKijqTijD1mUAjKm9Rz8jtkaxO/buaAPWOtszwevEO2Dhb
+    NbkabdjF9B/A7lFRppEHe5qMxM7FMBIhw5BX8BX/y78Y7yibtS+RZ7oAYRV/ubiT
+    sU9MKUwBTXipzJWI8wYx47/8SAJd5FsqrOvzjdkOSzJE0KPdnjUl2hjnNtBRnzzX
+    j+iPuSTAdDT7Ls78MXGQpYJnbUscXCiroTKlldw/l3zqRzw03ZLPemABjWpatIT2
+    V+SA+joOFmZJZ4h/ZmKxKvMzILuw7henW6Xzv+K20dWa
+    -----END CERTIFICATE-----
