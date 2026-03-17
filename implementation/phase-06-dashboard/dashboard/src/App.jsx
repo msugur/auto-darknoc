@@ -29,6 +29,7 @@ export default function App() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState("");
   const [demoResult, setDemoResult] = useState(null);
+  const [movieOpen, setMovieOpen] = useState(false);
 
   const lastUpdated = useMemo(() => {
     const ts = integrations.timestamp || summary.timestamp;
@@ -209,50 +210,37 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <h2>Demo Mode (UI Trigger)</h2>
-        <p>Run a controlled E2E simulation from the dashboard and follow results across AAP, ServiceNow, Slack, and Langfuse.</p>
-        <div className="demo-actions">
-          <button disabled={demoLoading} onClick={() => triggerDemo("crashloop")}>Trigger AI-Hub CrashLoop Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("oom")}>Trigger Edge OOM Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("lightspeed")}>Trigger Ansible Lightspeed Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("escalation")}>Trigger ServiceNow Escalation Demo</button>
-        </div>
-        {demoError ? <p className="demo-error">{demoError}</p> : null}
-        {demoResult ? (
-          <div className="demo-result">
-            <p>
-              <strong>Queued:</strong> scenario=<code>{demoResult.scenario}</code> · topic=<code>{demoResult.topic}</code> · offset=<code>{demoResult.kafka_offset}</code>
+        <h2>Business Impact Panel</h2>
+        <p>Executive view of value delivered from autonomous remediation over the current telemetry window.</p>
+        <div className="impact-grid">
+          <article className="impact-card">
+            <h3>Incidents Processed</h3>
+            <p className="impact-metric">{businessImpact.incidentsProcessed}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Remediation Success</h3>
+            <p className="impact-metric">{businessImpact.remediationSuccessPct.toFixed(1)}%</p>
+          </article>
+          <article className="impact-card">
+            <h3>Tickets Avoided</h3>
+            <p className="impact-metric">{businessImpact.ticketsAvoided}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Hours Returned to Ops</h3>
+            <p className="impact-metric">{businessImpact.hoursReturned.toFixed(2)}h</p>
+          </article>
+          <article className="impact-card">
+            <h3>Estimated Cost Saved</h3>
+            <p className="impact-metric">{formatMoney(businessImpact.estimatedCostSaved)}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Model Confidence</h3>
+            <p className="impact-metric">
+              {businessImpact.modelConfidenceAvg === null
+                ? "n/a"
+                : `${(Number(businessImpact.modelConfidenceAvg) * 100).toFixed(1)}%`}
             </p>
-            <p><strong>Event:</strong> {demoResult.event_message}</p>
-            <div className="demo-links">
-              <a href={demoResult.links?.aap_jobs} target="_blank" rel="noreferrer">Open AAP Jobs</a>
-              <a href={demoResult.links?.servicenow_incidents} target="_blank" rel="noreferrer">Open ServiceNow Incidents</a>
-              <a href={demoResult.links?.slack} target="_blank" rel="noreferrer">Open Slack #demos</a>
-              <a href={demoResult.links?.langfuse} target="_blank" rel="noreferrer">Open Langfuse</a>
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="panel">
-        <h2>Integration Status Matrix</h2>
-        <p>Last refresh: {lastUpdated} · ServiceNow incidents: {summary.open_incidents || 0}</p>
-        <div className="integration-grid">
-          {integrations.integrations.map((item) => (
-            <article className="integration-card" key={item.id}>
-              <div className="integration-header">
-                <h3>{item.name}</h3>
-                <span className={`pill ${item.status === "up" ? "up" : "down"}`}>
-                  {item.status}
-                </span>
-              </div>
-              <p className="meta">Type: {item.group.toUpperCase()}</p>
-              <p className="meta">HTTP: {item.http_code || "n/a"}</p>
-              <a href={item.ui_url} target="_blank" rel="noreferrer">
-                Open Dashboard
-              </a>
-            </article>
-          ))}
+          </article>
         </div>
       </section>
 
@@ -357,71 +345,93 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <h2>Business Impact Panel</h2>
-        <p>Executive view of value delivered from autonomous remediation over the current telemetry window.</p>
-        <div className="impact-grid">
-          <article className="impact-card">
-            <h3>Incidents Processed</h3>
-            <p className="impact-metric">{businessImpact.incidentsProcessed}</p>
-          </article>
-          <article className="impact-card">
-            <h3>Remediation Success</h3>
-            <p className="impact-metric">{businessImpact.remediationSuccessPct.toFixed(1)}%</p>
-          </article>
-          <article className="impact-card">
-            <h3>Tickets Avoided</h3>
-            <p className="impact-metric">{businessImpact.ticketsAvoided}</p>
-          </article>
-          <article className="impact-card">
-            <h3>Hours Returned to Ops</h3>
-            <p className="impact-metric">{businessImpact.hoursReturned.toFixed(2)}h</p>
-          </article>
-          <article className="impact-card">
-            <h3>Estimated Cost Saved</h3>
-            <p className="impact-metric">{formatMoney(businessImpact.estimatedCostSaved)}</p>
-          </article>
-          <article className="impact-card">
-            <h3>Model Confidence</h3>
-            <p className="impact-metric">
-              {businessImpact.modelConfidenceAvg === null
-                ? "n/a"
-                : `${(Number(businessImpact.modelConfidenceAvg) * 100).toFixed(1)}%`}
+        <h2>Demo Mode (UI Trigger)</h2>
+        <p>Run a controlled E2E simulation from the dashboard and follow results across AAP, ServiceNow, Slack, and Langfuse.</p>
+        <div className="demo-actions">
+          <button disabled={demoLoading} onClick={() => triggerDemo("crashloop")}>Trigger AI-Hub CrashLoop Demo</button>
+          <button disabled={demoLoading} onClick={() => triggerDemo("oom")}>Trigger Edge OOM Demo</button>
+          <button disabled={demoLoading} onClick={() => triggerDemo("lightspeed")}>Trigger Ansible Lightspeed Demo</button>
+          <button disabled={demoLoading} onClick={() => triggerDemo("escalation")}>Trigger ServiceNow Escalation Demo</button>
+        </div>
+        {demoError ? <p className="demo-error">{demoError}</p> : null}
+        {demoResult ? (
+          <div className="demo-result">
+            <p>
+              <strong>Queued:</strong> scenario=<code>{demoResult.scenario}</code> · topic=<code>{demoResult.topic}</code> · offset=<code>{demoResult.kafka_offset}</code>
             </p>
-          </article>
+            <p><strong>Event:</strong> {demoResult.event_message}</p>
+            <div className="demo-links">
+              <a href={demoResult.links?.aap_jobs} target="_blank" rel="noreferrer">Open AAP Jobs</a>
+              <a href={demoResult.links?.servicenow_incidents} target="_blank" rel="noreferrer">Open ServiceNow Incidents</a>
+              <a href={demoResult.links?.slack} target="_blank" rel="noreferrer">Open Slack #demos</a>
+              <a href={demoResult.links?.langfuse} target="_blank" rel="noreferrer">Open Langfuse</a>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="panel">
+        <h2>Integration Status Matrix</h2>
+        <p>Last refresh: {lastUpdated} · ServiceNow incidents: {summary.open_incidents || 0}</p>
+        <div className="integration-grid">
+          {integrations.integrations.map((item) => (
+            <article className="integration-card" key={item.id}>
+              <div className="integration-header">
+                <h3>{item.name}</h3>
+                <span className={`pill ${item.status === "up" ? "up" : "down"}`}>
+                  {item.status}
+                </span>
+              </div>
+              <p className="meta">Type: {item.group.toUpperCase()}</p>
+              <p className="meta">HTTP: {item.http_code || "n/a"}</p>
+              <a href={item.ui_url} target="_blank" rel="noreferrer">
+                Open Dashboard
+              </a>
+            </article>
+          ))}
         </div>
       </section>
 
       <section className="panel">
-        <h2>Incident Movie Replay</h2>
-        <p>Most recent incident story with remediation and escalation artifacts in execution order.</p>
-        <div className="movie-list">
-          {incidentMovie.length === 0 ? (
-            <p className="meta">No incident movie events yet.</p>
-          ) : (
-            incidentMovie.map((event) => (
-              <article className="movie-card" key={`${event.timestamp}-${event.incident_id}`}>
-                <div className="movie-head">
-                  <h3>{event.title}</h3>
-                  <span className={`pill ${event.stage === "Auto-Remediated" ? "up" : event.stage === "Escalated" ? "down" : "warn"}`}>
-                    {event.stage}
-                  </span>
-                </div>
-                <p className="meta">
-                  {new Date(event.timestamp).toLocaleString()} · Incident: {event.incident_id}
-                </p>
-                <p>{event.summary}</p>
-                <p className="meta">
-                  AAP Job: {event.artifacts?.aap_job_id || "n/a"} · SNOW: {event.artifacts?.servicenow_ticket || "n/a"} · Trace: {event.artifacts?.langfuse_trace_id || "n/a"}
-                </p>
-                <div className="tag-row">
-                  {(event.badges || []).map((tag) => (
-                    <span key={tag} className="tag">{tag}</span>
-                  ))}
-                </div>
-              </article>
-            ))
-          )}
+        <div className="panel-title-row">
+          <h2>Incident Movie Replay</h2>
+          <button type="button" className="toggle-btn" onClick={() => setMovieOpen((prev) => !prev)}>
+            {movieOpen ? "Collapse" : "Expand"}
+          </button>
         </div>
+        <p>Most recent incident story with remediation and escalation artifacts in execution order.</p>
+        {movieOpen ? (
+          <div className="movie-list">
+            {incidentMovie.length === 0 ? (
+              <p className="meta">No incident movie events yet.</p>
+            ) : (
+              incidentMovie.map((event) => (
+                <article className="movie-card" key={`${event.timestamp}-${event.incident_id}`}>
+                  <div className="movie-head">
+                    <h3>{event.title}</h3>
+                    <span className={`pill ${event.stage === "Auto-Remediated" ? "up" : event.stage === "Escalated" ? "down" : "warn"}`}>
+                      {event.stage}
+                    </span>
+                  </div>
+                  <p className="meta">
+                    {new Date(event.timestamp).toLocaleString()} · Incident: {event.incident_id}
+                  </p>
+                  <p>{event.summary}</p>
+                  <p className="meta">
+                    AAP Job: {event.artifacts?.aap_job_id || "n/a"} · SNOW: {event.artifacts?.servicenow_ticket || "n/a"} · Trace: {event.artifacts?.langfuse_trace_id || "n/a"}
+                  </p>
+                  <div className="tag-row">
+                    {(event.badges || []).map((tag) => (
+                      <span key={tag} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
+          <p className="meta">Panel collapsed. Click Expand to view the incident timeline.</p>
+        )}
       </section>
 
       <section className="panel">
