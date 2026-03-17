@@ -8,6 +8,6 @@ metadata:
     dark-noc/model-source: my-first-model
 data:
   MODEL_ID: "llama-32-3b-instruct"
-  VLLM_URL: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local/v1"
-  MODEL_API_URL: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local/v1/completions"
+  VLLM_URL: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1"
+  MODEL_API_URL: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1/completions"
   INFERENCE_SERVICE_NAME: "llama-32-3b-instruct"

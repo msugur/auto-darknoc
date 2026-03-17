@@ -37,11 +37,11 @@ spec:
         - name: POSTGRES_PASSWORD
           value: "langfuse-pg-demo-2026"
         - name: VLLM_URL
-          value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local/v1"
+          value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1"
         - name: VLLM_API_TOKEN
           value: "fake"
         - name: VLLM_EMBEDDING_URL
-          value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local/v1"
+          value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1"
         - name: VLLM_EMBEDDING_API_TOKEN
           value: "fake"
         - name: INFERENCE_MODEL
