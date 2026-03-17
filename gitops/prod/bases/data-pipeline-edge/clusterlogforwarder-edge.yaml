@@ -36,8 +36,6 @@ spec:
     - name: nginx-logs-input
       type: application
       application:
-        namespaces:
-          - dark-noc-edge
         selector:
           matchLabels:
             app: nginx
@@ -45,7 +43,7 @@ spec:
     - name: hub-kafka
       type: kafka
       kafka:
-        url: "tls://REPLACE-WITH-HUB-KAFKA-BOOTSTRAP-HOST:443"
+        url: "tls://dark-noc-kafka-kafka-bootstrap-dark-noc-kafka.apps.ocp.ms2b2.sandbox2859.opentlc.com:443"
         topic: nginx-logs
       tls:
         ca:
