@@ -123,6 +123,27 @@ body {
   margin: 0 0 8px;
 }
 
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toggle-btn {
+  border: 1px solid #3c628e;
+  border-radius: 8px;
+  background: #113154;
+  color: #e8f3ff;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.toggle-btn:hover {
+  border-color: #66b3ff;
+}
+
 .demo-actions {
   display: flex;
   flex-wrap: wrap;
