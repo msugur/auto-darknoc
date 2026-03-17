@@ -21,6 +21,8 @@ export default function App() {
     timestamp: "",
     integrations: [],
     slo: {},
+    incident_movie: [],
+    business_impact: {},
     access: [],
     eda_usage: { where: "", how: "", workflow: [] }
   });
@@ -88,6 +90,26 @@ export default function App() {
     if (value < 3600) return `${(value / 60).toFixed(1)}m`;
     return `${(value / 3600).toFixed(2)}h`;
   }
+
+  function formatMoney(value) {
+    const amount = Number(value || 0);
+    return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+
+  const businessImpact = useMemo(() => {
+    const impact = integrations.business_impact || {};
+    return {
+      incidentsProcessed: Number(impact.incidents_processed || 0),
+      remediationSuccessPct: Number(impact.remediation_success_pct || 0),
+      ticketsAvoided: Number(impact.tickets_avoided || 0),
+      escalatedTickets: Number(impact.escalated_tickets || 0),
+      hoursReturned: Number(impact.hours_returned_to_ops || 0),
+      estimatedCostSaved: Number(impact.estimated_cost_saved_usd || 0),
+      modelConfidenceAvg: impact.model_confidence_avg ?? null
+    };
+  }, [integrations.business_impact]);
+
+  const incidentMovie = useMemo(() => integrations.incident_movie || [], [integrations.incident_movie]);
 
   useEffect(() => {
     let active = true;
@@ -331,6 +353,74 @@ export default function App() {
               </span>
             </p>
           </article>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>Business Impact Panel</h2>
+        <p>Executive view of value delivered from autonomous remediation over the current telemetry window.</p>
+        <div className="impact-grid">
+          <article className="impact-card">
+            <h3>Incidents Processed</h3>
+            <p className="impact-metric">{businessImpact.incidentsProcessed}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Remediation Success</h3>
+            <p className="impact-metric">{businessImpact.remediationSuccessPct.toFixed(1)}%</p>
+          </article>
+          <article className="impact-card">
+            <h3>Tickets Avoided</h3>
+            <p className="impact-metric">{businessImpact.ticketsAvoided}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Hours Returned to Ops</h3>
+            <p className="impact-metric">{businessImpact.hoursReturned.toFixed(2)}h</p>
+          </article>
+          <article className="impact-card">
+            <h3>Estimated Cost Saved</h3>
+            <p className="impact-metric">{formatMoney(businessImpact.estimatedCostSaved)}</p>
+          </article>
+          <article className="impact-card">
+            <h3>Model Confidence</h3>
+            <p className="impact-metric">
+              {businessImpact.modelConfidenceAvg === null
+                ? "n/a"
+                : `${(Number(businessImpact.modelConfidenceAvg) * 100).toFixed(1)}%`}
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h2>Incident Movie Replay</h2>
+        <p>Most recent incident story with remediation and escalation artifacts in execution order.</p>
+        <div className="movie-list">
+          {incidentMovie.length === 0 ? (
+            <p className="meta">No incident movie events yet.</p>
+          ) : (
+            incidentMovie.map((event) => (
+              <article className="movie-card" key={`${event.timestamp}-${event.incident_id}`}>
+                <div className="movie-head">
+                  <h3>{event.title}</h3>
+                  <span className={`pill ${event.stage === "Auto-Remediated" ? "up" : event.stage === "Escalated" ? "down" : "warn"}`}>
+                    {event.stage}
+                  </span>
+                </div>
+                <p className="meta">
+                  {new Date(event.timestamp).toLocaleString()} · Incident: {event.incident_id}
+                </p>
+                <p>{event.summary}</p>
+                <p className="meta">
+                  AAP Job: {event.artifacts?.aap_job_id || "n/a"} · SNOW: {event.artifacts?.servicenow_ticket || "n/a"} · Trace: {event.artifacts?.langfuse_trace_id || "n/a"}
+                </p>
+                <div className="tag-row">
+                  {(event.badges || []).map((tag) => (
+                    <span key={tag} className="tag">{tag}</span>
+                  ))}
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
 

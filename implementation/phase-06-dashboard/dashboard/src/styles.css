@@ -241,6 +241,12 @@ body {
   border: 1px solid rgba(240, 93, 93, 0.4);
 }
 
+.pill.warn {
+  color: #ffeecb;
+  background: rgba(242, 170, 61, 0.2);
+  border: 1px solid rgba(242, 170, 61, 0.45);
+}
+
 .integration-card a {
   color: #84c8ff;
   text-decoration: none;
@@ -286,6 +292,78 @@ body {
   gap: 10px;
   font-size: 1.1rem;
   color: #c8fff0;
+}
+
+.impact-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.impact-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, #0d1f34 0%, #0b1726 100%);
+}
+
+.impact-card h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.impact-metric {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #d8fff2;
+}
+
+.movie-list {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.movie-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #0b1726;
+}
+
+.movie-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.movie-head h3 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.movie-card p {
+  margin: 6px 0;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  border: 1px solid #365a8c;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  color: #bddbff;
+  background: rgba(56, 108, 176, 0.2);
 }
 
 .access-card {

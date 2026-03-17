@@ -500,6 +500,89 @@ def compute_slo_metrics(records: list[dict[str, Any]], integrations_up: int, int
     }
 
 
+def build_incident_movie_and_impact(records: list[dict[str, Any]], slo_metrics: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    ordered = sorted(
+        records,
+        key=lambda rec: parse_iso8601(str(rec.get("timestamp", ""))) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )
+    movie: list[dict[str, Any]] = []
+    auto_resolved = 0
+    escalated = 0
+    success_count = 0
+    confidence_vals: list[float] = []
+
+    for rec in ordered[:8]:
+        ts_raw = str(rec.get("timestamp", "") or "")
+        ts = parse_iso8601(ts_raw)
+        incident_id = str(rec.get("incident_id", "n/a") or "n/a")
+        failure_type = str(rec.get("failure_type", "unknown") or "unknown")
+        severity = str(rec.get("severity", "unknown") or "unknown").upper()
+        action = str(rec.get("remediation_action", "n/a") or "n/a")
+        success = bool(rec.get("remediation_success", False))
+        servicenow_ticket = str(rec.get("servicenow_ticket", "") or "")
+        aap_job_id = str(rec.get("aap_job_id", "") or "")
+        edge_site = str(rec.get("edge_site_id", "edge-01") or "edge-01")
+
+        if success:
+            success_count += 1
+        if success and not servicenow_ticket:
+            auto_resolved += 1
+        if servicenow_ticket:
+            escalated += 1
+
+        confidence = float(rec.get("ai_confidence", 0) or 0)
+        if confidence > 0:
+            confidence_vals.append(confidence)
+
+        stage = "Escalated"
+        if success and not servicenow_ticket:
+            stage = "Auto-Remediated"
+        elif success:
+            stage = "Remediated"
+
+        badges = [f"severity:{severity}", f"site:{edge_site}", f"failure:{failure_type}"]
+        if aap_job_id:
+            badges.append("aap")
+        if servicenow_ticket:
+            badges.append("servicenow")
+
+        movie.append(
+            {
+                "timestamp": ts.isoformat() if ts else ts_raw,
+                "incident_id": incident_id,
+                "title": f"{failure_type} on {edge_site}",
+                "stage": stage,
+                "summary": f"Action: {action} · Result: {'success' if success else 'failed'}",
+                "artifacts": {
+                    "aap_job_id": aap_job_id or None,
+                    "servicenow_ticket": servicenow_ticket or None,
+                    "langfuse_trace_id": str(rec.get('langfuse_trace_id', '') or '') or None,
+                },
+                "badges": badges,
+            }
+        )
+
+    total = len(records)
+    mttr = float(slo_metrics.get("mttr_seconds") or 0)
+    baseline_manual_mttr = 900.0
+    per_incident_saved = max(0.0, baseline_manual_mttr - mttr)
+    total_seconds_saved = per_incident_saved * auto_resolved
+    hours_returned = total_seconds_saved / 3600.0
+
+    impact = {
+        "incidents_processed": total,
+        "remediation_success_pct": round((success_count / total) * 100, 2) if total else 0.0,
+        "tickets_avoided": auto_resolved,
+        "escalated_tickets": escalated,
+        "hours_returned_to_ops": round(hours_returned, 2),
+        "estimated_cost_saved_usd": round(hours_returned * 120.0, 2),
+        "model_confidence_avg": round(statistics.mean(confidence_vals), 3) if confidence_vals else None,
+        "baseline_manual_mttr_seconds": baseline_manual_mttr,
+    }
+    return movie, impact
+
+
 def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     normalized = scenario.strip().lower()
@@ -710,6 +793,7 @@ async def _build_integrations_payload() -> dict[str, Any]:
 
     audits = fetch_recent_incident_audits()
     slo_metrics = compute_slo_metrics(audits, up_count, len(integrations))
+    incident_movie, business_impact = build_incident_movie_and_impact(audits, slo_metrics)
 
     return {
         "timestamp": utc_now(),
@@ -717,6 +801,8 @@ async def _build_integrations_payload() -> dict[str, Any]:
         "up": up_count,
         "down": len(integrations) - up_count,
         "slo": slo_metrics,
+        "incident_movie": incident_movie,
+        "business_impact": business_impact,
         "integrations": integrations,
         "access": [
             {
