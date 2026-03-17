@@ -115,21 +115,39 @@ spec:
             - name: SLACK_UI_PASSWORD
               value: ""
             - name: OPENSHIFT_CONSOLE_URL
-              value: "https://console-openshift-console.apps.ocp.ms2b2.sandbox2859.opentlc.com"
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: OPENSHIFT_EDGE_CONSOLE_URL
+              value: "https://console-openshift-console.apps.ocp.cgsdl.sandbox2776.opentlc.com"
             - name: OPENSHIFT_USERNAME
               value: "admin"
             - name: OPENSHIFT_PASSWORD
-              value: "gBdYq2B0SiN5nocf"
+              value: "use-cluster-admin-login"
+            - name: OPENSHIFT_EDGE_USERNAME
+              value: "admin"
+            - name: OPENSHIFT_EDGE_PASSWORD
+              value: "use-token-login"
             - name: AAP_UI_URL
-              value: "https://aap-enterprise-controller-aap.apps.ocp.ms2b2.sandbox2859.opentlc.com"
+              value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com"
             - name: AAP_UI_USERNAME
               value: "admin"
             - name: AAP_UI_PASSWORD
               value: "redhat"
+            - name: GRAFANA_URL
+              value: "https://grafana-dark-noc-grafana.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: GRAFANA_UI_USERNAME
+              value: "admin"
+            - name: GRAFANA_UI_PASSWORD
+              value: "redhat"
+            - name: LANGFUSE_URL
+              value: "https://langfuse-dark-noc-observability.apps.ocp.v8w9c.sandbox205.opentlc.com"
+            - name: LANGFUSE_UI_USERNAME
+              value: "admin"
+            - name: LANGFUSE_UI_PASSWORD
+              value: "redhat"
             - name: KAFKA_UI_URL
-              value: "https://console-openshift-console.apps.ocp.ms2b2.sandbox2859.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod"
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod"
             - name: LOKI_UI_URL
-              value: "https://console-openshift-console.apps.ocp.ms2b2.sandbox2859.opentlc.com/monitoring/logs"
+              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/monitoring/logs"
             - name: AI_MODEL_NAME
               valueFrom:
                 configMapKeyRef:

@@ -38,9 +38,21 @@ OPENSHIFT_CONSOLE_URL = os.getenv(
     "OPENSHIFT_CONSOLE_URL",
     "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com",
 )
+OPENSHIFT_EDGE_CONSOLE_URL = os.getenv(
+    "OPENSHIFT_EDGE_CONSOLE_URL",
+    "https://console-openshift-console.apps.ocp.cgsdl.sandbox2776.opentlc.com",
+)
 AAP_UI_URL = os.getenv(
     "AAP_UI_URL",
     "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com",
+)
+GRAFANA_URL = os.getenv(
+    "GRAFANA_URL",
+    "https://grafana-dark-noc-grafana.apps.ocp.v8w9c.sandbox205.opentlc.com",
+)
+LANGFUSE_URL = os.getenv(
+    "LANGFUSE_URL",
+    "https://langfuse-dark-noc-observability.apps.ocp.v8w9c.sandbox205.opentlc.com",
 )
 KAFKA_UI_URL = os.getenv(
     "KAFKA_UI_URL",
@@ -52,10 +64,16 @@ LOKI_UI_URL = os.getenv(
 )
 OPENSHIFT_USERNAME = os.getenv("OPENSHIFT_USERNAME", "admin")
 OPENSHIFT_PASSWORD = os.getenv("OPENSHIFT_PASSWORD", "qCyH8I67Ry")
+OPENSHIFT_EDGE_USERNAME = os.getenv("OPENSHIFT_EDGE_USERNAME", "admin")
+OPENSHIFT_EDGE_PASSWORD = os.getenv("OPENSHIFT_EDGE_PASSWORD", "use-token-login")
 AAP_UI_USERNAME = os.getenv("AAP_UI_USERNAME", "admin")
 AAP_UI_PASSWORD = os.getenv("AAP_UI_PASSWORD", "redhat")
 SERVICENOW_UI_USERNAME = os.getenv("SERVICENOW_UI_USERNAME", "admin")
 SERVICENOW_UI_PASSWORD = os.getenv("SERVICENOW_UI_PASSWORD", "D$*REPLACE_WITH_SERVICENOW_PASSWORD")
+GRAFANA_UI_USERNAME = os.getenv("GRAFANA_UI_USERNAME", "admin")
+GRAFANA_UI_PASSWORD = os.getenv("GRAFANA_UI_PASSWORD", "redhat")
+LANGFUSE_UI_USERNAME = os.getenv("LANGFUSE_UI_USERNAME", "admin")
+LANGFUSE_UI_PASSWORD = os.getenv("LANGFUSE_UI_PASSWORD", "redhat")
 SLACK_UI_USERNAME = os.getenv("SLACK_UI_USERNAME", "")
 SLACK_UI_PASSWORD = os.getenv("SLACK_UI_PASSWORD", "")
 MCP_OPENSHIFT_URL = os.getenv("MCP_OPENSHIFT_URL", "http://mcp-openshift.dark-noc-mcp.svc:8001")
@@ -466,11 +484,32 @@ async def integrations() -> dict:
             "ui_url": OPENSHIFT_CONSOLE_URL,
         },
         {
+            "id": "openshift-edge",
+            "name": "OpenShift Edge",
+            "group": "platform",
+            "probe_url": OPENSHIFT_EDGE_CONSOLE_URL,
+            "ui_url": OPENSHIFT_EDGE_CONSOLE_URL,
+        },
+        {
             "id": "aap",
             "name": "AAP Controller",
             "group": "platform",
             "probe_url": f"{AAP_UI_URL}/api/controller/v2/ping/",
             "ui_url": AAP_UI_URL,
+        },
+        {
+            "id": "grafana",
+            "name": "Grafana",
+            "group": "platform",
+            "probe_url": f"{GRAFANA_URL}/api/health",
+            "ui_url": GRAFANA_URL,
+        },
+        {
+            "id": "langfuse",
+            "name": "Langfuse",
+            "group": "platform",
+            "probe_url": f"{LANGFUSE_URL}/api/public/health",
+            "ui_url": LANGFUSE_URL,
         },
         {
             "id": "kafka",
@@ -531,16 +570,28 @@ async def integrations() -> dict:
                 "password": SERVICENOW_UI_PASSWORD,
             },
             {
-                "name": "AAP Controller UI",
-                "url": AAP_UI_URL,
-                "username": AAP_UI_USERNAME,
-                "password": AAP_UI_PASSWORD,
+                "name": "Grafana",
+                "url": GRAFANA_URL,
+                "username": GRAFANA_UI_USERNAME,
+                "password": GRAFANA_UI_PASSWORD,
+            },
+            {
+                "name": "Langfuse",
+                "url": LANGFUSE_URL,
+                "username": LANGFUSE_UI_USERNAME,
+                "password": LANGFUSE_UI_PASSWORD,
             },
             {
                 "name": "OpenShift Hub Console",
                 "url": OPENSHIFT_CONSOLE_URL,
                 "username": OPENSHIFT_USERNAME,
                 "password": OPENSHIFT_PASSWORD,
+            },
+            {
+                "name": "OpenShift Edge Console",
+                "url": OPENSHIFT_EDGE_CONSOLE_URL,
+                "username": OPENSHIFT_EDGE_USERNAME,
+                "password": OPENSHIFT_EDGE_PASSWORD,
             },
             {
                 "name": "Slack Workspace",
