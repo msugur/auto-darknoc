@@ -28,6 +28,16 @@ spec:
               value: "https://github.com/ansible/ansible-tower-samples"
             - name: DEMO_SCM_BRANCH
               value: "master"
+            - name: EDGE_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: aap-edge-credentials
+                  key: EDGE_API_URL
+            - name: EDGE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aap-edge-credentials
+                  key: EDGE_API_TOKEN
           command:
             - python
             - -c
@@ -45,6 +55,8 @@ spec:
               pw = os.environ['AAP_PASSWORD']
               scm_url = os.environ['DEMO_SCM_URL']
               scm_branch = os.environ['DEMO_SCM_BRANCH']
+              edge_api_url = os.environ.get("EDGE_API_URL", "").strip()
+              edge_api_token = os.environ.get("EDGE_API_TOKEN", "").strip()
 
               token = base64.b64encode(f"{user}:{pw}".encode()).decode()
               headers = {
@@ -134,10 +146,54 @@ spec:
                       print(f"updated template {name}: {jt.get('id')}")
                   return int(jt["id"])
 
+              def ensure_edge_credential():
+                  if not edge_api_url or not edge_api_token or edge_api_token.startswith("REPLACE_"):
+                      print("edge credential secret is placeholder; skipping edge credential bootstrap")
+                      return None
+
+                  ctypes = get("credential_types", {"managed": "true"}).get("results", [])
+                  k8s_type = next((c for c in ctypes if c.get("name") == "OpenShift or Kubernetes API Bearer Token"), None)
+                  if not k8s_type:
+                      print("OpenShift/Kubernetes bearer credential type not found; skipping")
+                      return None
+
+                  name = "edge-01-k8s"
+                  cred = by_name("credentials", name)
+                  payload = {
+                      "name": name,
+                      "organization": 1,
+                      "credential_type": int(k8s_type["id"]),
+                      "inputs": {
+                          "host": edge_api_url,
+                          "verify_ssl": False,
+                          "bearer_token": edge_api_token,
+                      },
+                  }
+                  if not cred:
+                      cred = post("credentials", payload)
+                      print(f"created credential {name}: {cred.get('id')}")
+                  else:
+                      patch("credentials", int(cred["id"]), payload)
+                      print(f"updated credential {name}: {cred.get('id')}")
+                  return int(cred["id"])
+
+              def associate_credential(job_template_id, credential_id):
+                  if not credential_id:
+                      return
+                  try:
+                      req("POST", f"{api}/job_templates/{job_template_id}/credentials/", {"id": int(credential_id)})
+                      print(f"associated credential {credential_id} -> template {job_template_id}")
+                  except Exception as e:
+                      print(f"credential association warning for template {job_template_id}: {e}")
+
               project_id = ensure_project("Demo Project")
               inventory_id = ensure_inventory("Demo Inventory")
+              edge_cred_id = ensure_edge_credential()
               hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
-              ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
+              restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml")
+              lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
+              associate_credential(restart_id, edge_cred_id)
+              associate_credential(lightspeed_id, edge_cred_id)
 
               jobs = get("jobs", {"job_template": hello_id}).get("count", 0)
               if int(jobs) == 0:
