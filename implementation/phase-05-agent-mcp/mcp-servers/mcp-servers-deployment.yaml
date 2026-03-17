@@ -397,11 +397,11 @@ metadata:
     app.kubernetes.io/part-of: dark-noc
 type: Opaque
 stringData:
-  SERVICENOW_URL: "http://servicenow-mock.dark-noc-servicenow-mock.svc:8080"
-  SERVICENOW_MODE: "mock"
-  SERVICENOW_USERNAME: ""
-  SERVICENOW_PASSWORD: ""
-  SERVICENOW_API_KEY: "demo-api-key-2026"
+  SERVICENOW_URL: "https://dev365997.service-now.com"
+  SERVICENOW_MODE: "real"
+  SERVICENOW_USERNAME: "admin"
+  SERVICENOW_PASSWORD: "D$*REPLACE_WITH_SERVICENOW_PASSWORD"
+  SERVICENOW_API_KEY: ""
   SERVICENOW_CALLER_NAME: "Mithun Sugur"
 ---
 # Slack secrets template (fill in before applying)
@@ -414,4 +414,4 @@ metadata:
     app.kubernetes.io/part-of: dark-noc
 type: Opaque
 stringData:
-  SLACK_BOT_TOKEN: "xoxb-REPLACE-WITH-YOUR-SLACK-BOT-TOKEN"
+  SLACK_BOT_TOKEN: "REPLACE_WITH_XOXB_TOKEN"
