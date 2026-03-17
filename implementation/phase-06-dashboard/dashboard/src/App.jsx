@@ -20,6 +20,7 @@ export default function App() {
     down: 0,
     timestamp: "",
     integrations: [],
+    slo: {},
     access: [],
     eda_usage: { where: "", how: "", workflow: [] }
   });
@@ -54,29 +55,39 @@ export default function App() {
     const items = integrations.integrations || [];
     const total = items.length || 0;
     const up = items.filter((item) => item.status === "up").length;
-    const availability = total > 0 ? (up / total) * 100 : 0;
-
-    const mcpItems = items.filter((item) => item.group === "mcp");
-    const mcpTotal = mcpItems.length || 0;
-    const mcpUp = mcpItems.filter((item) => item.status === "up").length;
-    const mcpAvailability = mcpTotal > 0 ? (mcpUp / mcpTotal) * 100 : 0;
-
-    const servicenowUp = String(summary.servicenow || "").toLowerCase() === "up";
-    const incidentLoad = Number(summary.open_incidents || 0);
+    const slo = integrations.slo || {};
+    const availability = Number(
+      slo.platform_availability_pct ?? (total > 0 ? (up / total) * 100 : 0)
+    );
 
     return {
+      sampleSize: Number(slo.sample_size || 0),
+      windowHours: Number(slo.window_hours || 24),
       availability,
       availabilityTarget: 99.0,
       availabilityPass: availability >= 99.0,
-      mcpAvailability,
-      mcpTarget: 100,
-      mcpPass: mcpAvailability >= 100,
-      servicenowUp,
-      incidentLoad,
-      incidentBudget: 5,
-      incidentPass: incidentLoad <= 5
+      mttdSeconds: slo.mttd_seconds ?? null,
+      mttrSeconds: slo.mttr_seconds ?? null,
+      p95RecoverySeconds: slo.p95_recovery_seconds ?? null,
+      mttdEstimated: Boolean(slo.mttd_estimated),
+      edgeRemediationPct: Number(slo.edge_remediation_pct ?? 0),
+      autoRemediationPct: Number(slo.auto_remediation_pct ?? 0),
+      escalationPct: Number(slo.escalation_pct ?? 0),
+      aapSuccessPct: slo.aap_success_pct ?? null,
+      aiConfidenceAvg: slo.ai_confidence_avg ?? null,
+      incidentsPerHour: Number(slo.incidents_per_hour ?? 0)
     };
-  }, [integrations.integrations, summary.servicenow, summary.open_incidents]);
+  }, [integrations.integrations, integrations.slo]);
+
+  function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) {
+      return "n/a";
+    }
+    const value = Number(seconds);
+    if (value < 60) return `${value.toFixed(1)}s`;
+    if (value < 3600) return `${(value / 60).toFixed(1)}m`;
+    return `${(value / 3600).toFixed(2)}h`;
+  }
 
   useEffect(() => {
     let active = true;
@@ -225,7 +236,10 @@ export default function App() {
 
       <section className="panel">
         <h2>Critical SLO (Live Data)</h2>
-        <p>Real-time SLO posture from live probes and incident feed.</p>
+        <p>
+          Live SLO posture from incident-audit Kafka telemetry over the last {liveSlo.windowHours}h
+          ({liveSlo.sampleSize} events).
+        </p>
         <div className="slo-grid">
           <article className="slo-card">
             <h3>Platform Availability</h3>
@@ -237,29 +251,83 @@ export default function App() {
             </p>
           </article>
           <article className="slo-card">
-            <h3>MCP Mesh Health</h3>
+            <h3>MTTD</h3>
             <p className="slo-metric">
-              {liveSlo.mcpAvailability.toFixed(1)}%
-              <span className={liveSlo.mcpPass ? "pill up" : "pill down"}>
-                target {liveSlo.mcpTarget}%
+              {formatDuration(liveSlo.mttdSeconds)}
+              <span className={liveSlo.mttdSeconds !== null ? "pill up" : "pill down"}>
+                {liveSlo.mttdEstimated ? "estimated" : "measured"}
               </span>
             </p>
           </article>
           <article className="slo-card">
-            <h3>ServiceNow Pipeline</h3>
+            <h3>MTTR</h3>
             <p className="slo-metric">
-              {liveSlo.servicenowUp ? "Up" : "Down"}
-              <span className={liveSlo.servicenowUp ? "pill up" : "pill down"}>
-                live check
+              {formatDuration(liveSlo.mttrSeconds)}
+              <span className={liveSlo.mttrSeconds !== null ? "pill up" : "pill down"}>
+                live
               </span>
             </p>
           </article>
           <article className="slo-card">
-            <h3>Incident Load</h3>
+            <h3>P95 Recovery</h3>
             <p className="slo-metric">
-              {liveSlo.incidentLoad}
-              <span className={liveSlo.incidentPass ? "pill up" : "pill down"}>
-                budget ≤ {liveSlo.incidentBudget}
+              {formatDuration(liveSlo.p95RecoverySeconds)}
+              <span className={liveSlo.p95RecoverySeconds !== null ? "pill up" : "pill down"}>
+                tail latency
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>Edge Remediation %</h3>
+            <p className="slo-metric">
+              {liveSlo.edgeRemediationPct.toFixed(1)}%
+              <span className={liveSlo.edgeRemediationPct >= 70 ? "pill up" : "pill down"}>
+                local first
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>Auto-Remediate %</h3>
+            <p className="slo-metric">
+              {liveSlo.autoRemediationPct.toFixed(1)}%
+              <span className={liveSlo.autoRemediationPct >= 60 ? "pill up" : "pill down"}>
+                no ticket
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>Escalation %</h3>
+            <p className="slo-metric">
+              {liveSlo.escalationPct.toFixed(1)}%
+              <span className={liveSlo.escalationPct <= 35 ? "pill up" : "pill down"}>
+                to humans
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>AAP Success %</h3>
+            <p className="slo-metric">
+              {liveSlo.aapSuccessPct === null ? "n/a" : `${Number(liveSlo.aapSuccessPct).toFixed(1)}%`}
+              <span className={liveSlo.aapSuccessPct !== null && Number(liveSlo.aapSuccessPct) >= 80 ? "pill up" : "pill down"}>
+                job outcome
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>AI Confidence</h3>
+            <p className="slo-metric">
+              {liveSlo.aiConfidenceAvg === null ? "n/a" : `${(Number(liveSlo.aiConfidenceAvg) * 100).toFixed(1)}%`}
+              <span className={liveSlo.aiConfidenceAvg !== null && Number(liveSlo.aiConfidenceAvg) >= 0.7 ? "pill up" : "pill down"}>
+                avg score
+              </span>
+            </p>
+          </article>
+          <article className="slo-card">
+            <h3>Incident Throughput</h3>
+            <p className="slo-metric">
+              {liveSlo.incidentsPerHour.toFixed(2)}/h
+              <span className={liveSlo.incidentsPerHour <= 3 ? "pill up" : "pill down"}>
+                rolling rate
               </span>
             </p>
           </article>

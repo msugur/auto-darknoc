@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import statistics
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -19,7 +20,7 @@ from uuid import uuid4
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from kafka import KafkaProducer
+from kafka import KafkaConsumer, KafkaProducer
 from pydantic import BaseModel
 
 
@@ -101,6 +102,9 @@ DEMO_KAFKA_BOOTSTRAP = os.getenv(
     "dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc:9092",
 )
 DEMO_TOPIC = os.getenv("DEMO_TOPIC", "nginx-logs")
+SLO_AUDIT_TOPIC = os.getenv("SLO_AUDIT_TOPIC", "incident-audit")
+SLO_LOOKBACK_HOURS = int(os.getenv("SLO_LOOKBACK_HOURS", "24"))
+SLO_MAX_MESSAGES = int(os.getenv("SLO_MAX_MESSAGES", "500"))
 
 chat_sessions: dict[str, list[dict[str, str]]] = {}
 EXEC_REPLY_MAX_CHARS = 1600
@@ -131,6 +135,15 @@ class DemoTriggerRequest(BaseModel):
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def parse_iso8601(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except Exception:
+        return None
 
 
 def is_real_servicenow() -> bool:
@@ -353,6 +366,137 @@ async def fetch_servicenow_incident_count() -> tuple[int, str]:
         return 0, "down"
 
 
+def fetch_recent_incident_audits() -> list[dict[str, Any]]:
+    """
+    Read recent incident-audit records directly from Kafka.
+    Uses end-offset seek to avoid scanning full topic.
+    """
+    consumer = KafkaConsumer(
+        SLO_AUDIT_TOPIC,
+        bootstrap_servers=DEMO_KAFKA_BOOTSTRAP,
+        auto_offset_reset="latest",
+        enable_auto_commit=False,
+        consumer_timeout_ms=2500,
+        value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
+    )
+    records: list[dict[str, Any]] = []
+    try:
+        consumer.poll(timeout_ms=800)
+        partitions = consumer.assignment()
+        if not partitions:
+            return records
+
+        max_per_partition = max(50, int(SLO_MAX_MESSAGES / max(1, len(partitions))))
+        for tp in partitions:
+            end_offset = consumer.end_offsets([tp])[tp]
+            start_offset = max(0, end_offset - max_per_partition)
+            consumer.seek(tp, start_offset)
+
+        cutoff = datetime.now(timezone.utc).timestamp() - (SLO_LOOKBACK_HOURS * 3600)
+        for msg in consumer:
+            raw = msg.value
+            try:
+                data = json.loads(raw)
+            except Exception:
+                continue
+
+            ts = parse_iso8601(str(data.get("timestamp", "")))
+            if ts and ts.timestamp() >= cutoff:
+                records.append(data)
+            elif not ts:
+                # Keep malformed timestamp records to avoid dropping live metrics completely.
+                records.append(data)
+
+            if len(records) >= SLO_MAX_MESSAGES:
+                break
+    finally:
+        consumer.close()
+    return records
+
+
+def compute_slo_metrics(records: list[dict[str, Any]], integrations_up: int, integrations_total: int) -> dict[str, Any]:
+    total = len(records)
+    if total == 0:
+        return {
+            "window_hours": SLO_LOOKBACK_HOURS,
+            "sample_size": 0,
+            "mttd_seconds": None,
+            "mttd_estimated": True,
+            "mttr_seconds": None,
+            "p95_recovery_seconds": None,
+            "edge_remediation_pct": None,
+            "auto_remediation_pct": None,
+            "escalation_pct": None,
+            "aap_success_pct": None,
+            "ai_confidence_avg": None,
+            "incidents_per_hour": 0.0,
+            "platform_availability_pct": round((integrations_up / integrations_total) * 100, 2) if integrations_total else 0.0,
+        }
+
+    durations = []
+    durations_for_p95 = []
+    auto_remediated = 0
+    edge_remediated = 0
+    escalated = 0
+    aap_total = 0
+    aap_success = 0
+    confidence_vals = []
+    mttd_samples = []
+    mttd_estimated = False
+
+    for rec in records:
+        remediation_success = bool(rec.get("remediation_success", False))
+        remediation_action = str(rec.get("remediation_action", "") or "")
+        servicenow_ticket = str(rec.get("servicenow_ticket", "") or "")
+        aap_job_id = str(rec.get("aap_job_id", "") or "")
+        edge_site = str(rec.get("edge_site_id", "") or "")
+
+        dur_ms = float(rec.get("total_duration_ms", 0) or 0)
+        if dur_ms > 0:
+            dur_sec = dur_ms / 1000.0
+            durations.append(dur_sec)
+            durations_for_p95.append(dur_sec)
+
+            # MTTD is not emitted directly today; estimate from first segment of full lifecycle.
+            mttd_samples.append(max(1.0, dur_sec * 0.2))
+            mttd_estimated = True
+
+        confidence = float(rec.get("ai_confidence", 0) or 0)
+        if confidence > 0:
+            confidence_vals.append(confidence)
+
+        if remediation_success and not servicenow_ticket:
+            auto_remediated += 1
+        if remediation_success and edge_site:
+            edge_remediated += 1
+        if servicenow_ticket or "escalat" in remediation_action.lower():
+            escalated += 1
+        if aap_job_id:
+            aap_total += 1
+            if remediation_success:
+                aap_success += 1
+
+    mttr = statistics.mean(durations) if durations else None
+    mttd = statistics.mean(mttd_samples) if mttd_samples else None
+    p95 = statistics.quantiles(durations_for_p95, n=20)[18] if len(durations_for_p95) >= 20 else (max(durations_for_p95) if durations_for_p95 else None)
+
+    return {
+        "window_hours": SLO_LOOKBACK_HOURS,
+        "sample_size": total,
+        "mttd_seconds": round(mttd, 2) if mttd is not None else None,
+        "mttd_estimated": mttd_estimated,
+        "mttr_seconds": round(mttr, 2) if mttr is not None else None,
+        "p95_recovery_seconds": round(p95, 2) if p95 is not None else None,
+        "edge_remediation_pct": round((edge_remediated / total) * 100, 2),
+        "auto_remediation_pct": round((auto_remediated / total) * 100, 2),
+        "escalation_pct": round((escalated / total) * 100, 2),
+        "aap_success_pct": round((aap_success / aap_total) * 100, 2) if aap_total else None,
+        "ai_confidence_avg": round(statistics.mean(confidence_vals), 3) if confidence_vals else None,
+        "incidents_per_hour": round(total / max(1, SLO_LOOKBACK_HOURS), 2),
+        "platform_availability_pct": round((integrations_up / integrations_total) * 100, 2) if integrations_total else 0.0,
+    }
+
+
 def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
     now = datetime.now(timezone.utc).isoformat()
     normalized = scenario.strip().lower()
@@ -562,11 +706,15 @@ async def integrations() -> dict:
             }
         )
 
+    audits = fetch_recent_incident_audits()
+    slo_metrics = compute_slo_metrics(audits, up_count, len(integrations))
+
     return {
         "timestamp": utc_now(),
         "total": len(integrations),
         "up": up_count,
         "down": len(integrations) - up_count,
+        "slo": slo_metrics,
         "integrations": integrations,
         "access": [
             {
