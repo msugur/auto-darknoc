@@ -383,6 +383,16 @@ body {
   stroke: #4d6791;
 }
 
+.platform-layer-mid {
+  fill: rgba(14, 36, 62, 0.92);
+  stroke: #5f7fb2;
+}
+
+.platform-layer-base {
+  fill: rgba(24, 45, 69, 0.94);
+  stroke: #7a9cc5;
+}
+
 .node-text {
   fill: #e9f2ff;
   font-size: 13px;

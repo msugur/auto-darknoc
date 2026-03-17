@@ -46,6 +46,10 @@ AAP_UI_URL = os.getenv(
     "AAP_UI_URL",
     "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com",
 )
+AAP_LIGHTSPEED_URL = os.getenv(
+    "AAP_LIGHTSPEED_URL",
+    "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com/#/templates",
+)
 GRAFANA_URL = os.getenv(
     "GRAFANA_URL",
     "https://grafana-dark-noc-grafana.apps.ocp.v8w9c.sandbox205.opentlc.com",
@@ -68,6 +72,8 @@ OPENSHIFT_EDGE_USERNAME = os.getenv("OPENSHIFT_EDGE_USERNAME", "admin")
 OPENSHIFT_EDGE_PASSWORD = os.getenv("OPENSHIFT_EDGE_PASSWORD", "use-token-login")
 AAP_UI_USERNAME = os.getenv("AAP_UI_USERNAME", "admin")
 AAP_UI_PASSWORD = os.getenv("AAP_UI_PASSWORD", "redhat")
+KAFKA_UI_USERNAME = os.getenv("KAFKA_UI_USERNAME", "admin")
+KAFKA_UI_PASSWORD = os.getenv("KAFKA_UI_PASSWORD", "use-cluster-admin-login")
 SERVICENOW_UI_USERNAME = os.getenv("SERVICENOW_UI_USERNAME", "admin")
 SERVICENOW_UI_PASSWORD = os.getenv("SERVICENOW_UI_PASSWORD", "D$*REPLACE_WITH_SERVICENOW_PASSWORD")
 GRAFANA_UI_USERNAME = os.getenv("GRAFANA_UI_USERNAME", "admin")
@@ -570,6 +576,18 @@ async def integrations() -> dict:
                 "password": SERVICENOW_UI_PASSWORD,
             },
             {
+                "name": "AAP Controller UI",
+                "url": AAP_UI_URL,
+                "username": AAP_UI_USERNAME,
+                "password": AAP_UI_PASSWORD,
+            },
+            {
+                "name": "AAP Lightspeed UI",
+                "url": AAP_LIGHTSPEED_URL,
+                "username": AAP_UI_USERNAME,
+                "password": AAP_UI_PASSWORD,
+            },
+            {
                 "name": "Grafana",
                 "url": GRAFANA_URL,
                 "username": GRAFANA_UI_USERNAME,
@@ -592,6 +610,12 @@ async def integrations() -> dict:
                 "url": OPENSHIFT_EDGE_CONSOLE_URL,
                 "username": OPENSHIFT_EDGE_USERNAME,
                 "password": OPENSHIFT_EDGE_PASSWORD,
+            },
+            {
+                "name": "Kafka Console",
+                "url": KAFKA_UI_URL,
+                "username": KAFKA_UI_USERNAME,
+                "password": KAFKA_UI_PASSWORD,
             },
             {
                 "name": "Slack Workspace",
