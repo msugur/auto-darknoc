@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Auto Dark NOC production project
   sourceRepos:
-    - '*'
+    - 'https://github.com/msugur/auto-darknoc.git'
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc
@@ -18,3 +18,5 @@ spec:
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
+  orphanedResources:
+    warn: true
