@@ -1,0 +1,115 @@
+# =============================================================
+# Failure Simulator CronJob — Triggers Demo Incidents
+# =============================================================
+# PURPOSE:
+#   Periodically injects failures into the nginx deployment to
+#   demonstrate the Dark NOC's autonomous detection and remediation.
+#   This is the "demo trigger" that starts the full AI pipeline.
+#
+# FAILURE TYPES SIMULATED:
+#   1. OOMKilled: Reduce memory limit to 32Mi → nginx dies from OOM
+#   2. CrashLoop: Apply invalid nginx config → pod CrashLoops
+#   3. Recovery: Restore normal config → AI detected and fixed it
+#
+# DEMO FLOW WITH THIS CRONJOB:
+#   T+0:  CronJob reduces nginx memory limit to 32Mi
+#   T+5s: nginx pod killed (OOMKilled) — logs stream to Kafka
+#   T+30s: LangGraph agent analyzes log → identifies OOMKilled
+#   T+45s: Agent calls AAP MCP → restart-nginx job launches
+#   T+60s: nginx pod restarted with original memory → Running
+#   T+65s: Agent sends Slack: "✅ nginx OOMKill remediated"
+#
+# SCHEDULE:
+#   Default: every 30 minutes (for continuous demo looping)
+#   One-shot: use the one-shot Job below for manual triggers
+#
+# APPLY WITH (on EDGE cluster):
+#   oc --context=${EDGE_CONTEXT} apply -f failure-cronjob.yaml
+# =============================================================
+---
+# CronJob: OOMKill simulation every 30 minutes
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nginx-oom-simulator
+  namespace: dark-noc-edge
+  labels:
+    app: failure-simulator
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/role: demo-trigger
+spec:
+  schedule: "*/30 * * * *"   # Every 30 minutes
+  suspend: true               # START SUSPENDED — unsuspend to activate demo loop
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: nginx-failure-sa
+          restartPolicy: Never
+          containers:
+            - name: failure-injector
+              image: quay.io/openshift/origin-cli:4.21
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== Dark NOC Failure Simulator: OOMKill ==="
+                  echo "Reducing nginx memory limit to trigger OOMKill..."
+
+                  kubectl patch deployment nginx \
+                    -n dark-noc-edge \
+                    --type=json \
+                    -p='[
+                      {"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"32Mi"},
+                      {"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"16Mi"}
+                    ]'
+
+                  echo "Memory limit reduced to 32Mi — nginx will OOMKill soon"
+                  echo "Dark NOC agent will detect and remediate in ~60 seconds"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+---
+# ServiceAccount for failure injector
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-failure-sa
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+# RBAC: allow patching deployments
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nginx-patcher
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nginx-failure-sa-patcher
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+subjects:
+  - kind: ServiceAccount
+    name: nginx-failure-sa
+    namespace: dark-noc-edge
+roleRef:
+  kind: Role
+  name: nginx-patcher
+  apiGroup: rbac.authorization.k8s.io
+---
+# Manual one-shot Job: run this for an instant demo trigger
+# kubectl create job nginx-oom-now --from=cronjob/nginx-oom-simulator -n dark-noc-edge
+# (creates a Job that runs immediately without waiting for schedule)
