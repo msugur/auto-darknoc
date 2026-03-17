@@ -30,6 +30,8 @@ export default function App() {
   const [demoError, setDemoError] = useState("");
   const [demoResult, setDemoResult] = useState(null);
   const [movieOpen, setMovieOpen] = useState(false);
+  const [integrationOpen, setIntegrationOpen] = useState(true);
+  const [accessOpen, setAccessOpen] = useState(true);
 
   const lastUpdated = useMemo(() => {
     const ts = integrations.timestamp || summary.timestamp;
@@ -371,39 +373,57 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <h2>Integration Status Matrix</h2>
-        <p>Last refresh: {lastUpdated} · ServiceNow incidents: {summary.open_incidents || 0}</p>
-        <div className="integration-grid">
-          {integrations.integrations.map((item) => (
-            <article className="integration-card" key={item.id}>
-              <div className="integration-header">
-                <h3>{item.name}</h3>
-                <span className={`pill ${item.status === "up" ? "up" : "down"}`}>
-                  {item.status}
-                </span>
-              </div>
-              <p className="meta">Type: {item.group.toUpperCase()}</p>
-              <p className="meta">HTTP: {item.http_code || "n/a"}</p>
-              <a href={item.ui_url} target="_blank" rel="noreferrer">
-                Open Dashboard
-              </a>
-            </article>
-          ))}
+        <div className="panel-title-row">
+          <h2>Integration Status Matrix</h2>
+          <button type="button" className="toggle-btn" onClick={() => setIntegrationOpen((prev) => !prev)}>
+            {integrationOpen ? "Collapse" : "Expand"}
+          </button>
         </div>
+        <p>Last refresh: {lastUpdated} · ServiceNow incidents: {summary.open_incidents || 0}</p>
+        {integrationOpen ? (
+          <div className="integration-grid">
+            {integrations.integrations.map((item) => (
+              <article className="integration-card" key={item.id}>
+                <div className="integration-header">
+                  <h3>{item.name}</h3>
+                  <span className={`pill ${item.status === "up" ? "up" : "down"}`}>
+                    {item.status}
+                  </span>
+                </div>
+                <p className="meta">Type: {item.group.toUpperCase()}</p>
+                <p className="meta">HTTP: {item.http_code || "n/a"}</p>
+                <a href={item.ui_url} target="_blank" rel="noreferrer">
+                  Open Dashboard
+                </a>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="meta">Panel collapsed. Click Expand to view integrations.</p>
+        )}
       </section>
 
       <section className="panel">
-        <h2>Access Center (Live Credentials)</h2>
-        <div className="access-grid">
-          {integrations.access?.map((item) => (
-            <article className="access-card" key={item.name}>
-              <h3>{item.name}</h3>
-              <p><strong>URL:</strong> <a href={item.url} target="_blank" rel="noreferrer">Open Portal</a></p>
-              <p><strong>Username:</strong> {item.username || "n/a"}</p>
-              <p><strong>Password:</strong> {item.password || "n/a"}</p>
-            </article>
-          ))}
+        <div className="panel-title-row">
+          <h2>Access Center (Live Credentials)</h2>
+          <button type="button" className="toggle-btn" onClick={() => setAccessOpen((prev) => !prev)}>
+            {accessOpen ? "Collapse" : "Expand"}
+          </button>
         </div>
+        {accessOpen ? (
+          <div className="access-grid">
+            {integrations.access?.map((item) => (
+              <article className="access-card" key={item.name}>
+                <h3>{item.name}</h3>
+                <p><strong>URL:</strong> <a href={item.url} target="_blank" rel="noreferrer">Open Portal</a></p>
+                <p><strong>Username:</strong> {item.username || "n/a"}</p>
+                <p><strong>Password:</strong> {item.password || "n/a"}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="meta">Panel collapsed. Click Expand to view live credentials.</p>
+        )}
       </section>
 
       <section className="panel">
