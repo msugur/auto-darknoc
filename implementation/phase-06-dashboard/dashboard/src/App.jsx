@@ -393,48 +393,6 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <div className="panel-title-row">
-          <h2>Incident Movie Replay</h2>
-          <button type="button" className="toggle-btn" onClick={() => setMovieOpen((prev) => !prev)}>
-            {movieOpen ? "Collapse" : "Expand"}
-          </button>
-        </div>
-        <p>Most recent incident story with remediation and escalation artifacts in execution order.</p>
-        {movieOpen ? (
-          <div className="movie-list">
-            {incidentMovie.length === 0 ? (
-              <p className="meta">No incident movie events yet.</p>
-            ) : (
-              incidentMovie.map((event) => (
-                <article className="movie-card" key={`${event.timestamp}-${event.incident_id}`}>
-                  <div className="movie-head">
-                    <h3>{event.title}</h3>
-                    <span className={`pill ${event.stage === "Auto-Remediated" ? "up" : event.stage === "Escalated" ? "down" : "warn"}`}>
-                      {event.stage}
-                    </span>
-                  </div>
-                  <p className="meta">
-                    {new Date(event.timestamp).toLocaleString()} · Incident: {event.incident_id}
-                  </p>
-                  <p>{event.summary}</p>
-                  <p className="meta">
-                    AAP Job: {event.artifacts?.aap_job_id || "n/a"} · SNOW: {event.artifacts?.servicenow_ticket || "n/a"} · Trace: {event.artifacts?.langfuse_trace_id || "n/a"}
-                  </p>
-                  <div className="tag-row">
-                    {(event.badges || []).map((tag) => (
-                      <span key={tag} className="tag">{tag}</span>
-                    ))}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        ) : (
-          <p className="meta">Panel collapsed. Click Expand to view the incident timeline.</p>
-        )}
-      </section>
-
-      <section className="panel">
         <h2>Access Center (Live Credentials)</h2>
         <div className="access-grid">
           {integrations.access?.map((item) => (
@@ -589,6 +547,48 @@ export default function App() {
             ))}
           </ol>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title-row">
+          <h2>Incident Movie Replay</h2>
+          <button type="button" className="toggle-btn" onClick={() => setMovieOpen((prev) => !prev)}>
+            {movieOpen ? "Collapse" : "Expand"}
+          </button>
+        </div>
+        <p>Most recent incident story with remediation and escalation artifacts in execution order.</p>
+        {movieOpen ? (
+          <div className="movie-list">
+            {incidentMovie.length === 0 ? (
+              <p className="meta">No incident movie events yet.</p>
+            ) : (
+              incidentMovie.map((event) => (
+                <article className="movie-card" key={`${event.timestamp}-${event.incident_id}`}>
+                  <div className="movie-head">
+                    <h3>{event.title}</h3>
+                    <span className={`pill ${event.stage === "Auto-Remediated" ? "up" : event.stage === "Escalated" ? "down" : "warn"}`}>
+                      {event.stage}
+                    </span>
+                  </div>
+                  <p className="meta">
+                    {new Date(event.timestamp).toLocaleString()} · Incident: {event.incident_id}
+                  </p>
+                  <p>{event.summary}</p>
+                  <p className="meta">
+                    AAP Job: {event.artifacts?.aap_job_id || "n/a"} · SNOW: {event.artifacts?.servicenow_ticket || "n/a"} · Trace: {event.artifacts?.langfuse_trace_id || "n/a"}
+                  </p>
+                  <div className="tag-row">
+                    {(event.badges || []).map((tag) => (
+                      <span key={tag} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
+          <p className="meta">Panel collapsed. Click Expand to view the incident timeline.</p>
+        )}
       </section>
 
       <ChatPanel apiBase={CHATBOT_URL} />
