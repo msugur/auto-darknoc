@@ -75,16 +75,3 @@ spec:
   # Backup is intentionally omitted in the initial deploy path.
   # Enable barmanObjectStore after creating a MinIO credential secret
   # in the same namespace (`dark-noc-observability`).
----
-# Pre-create the superuser secret (CloudNativePG needs this before bootstrap)
-apiVersion: v1
-kind: Secret
-metadata:
-  name: langfuse-postgres-superuser
-  namespace: dark-noc-observability
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  username: "langfuse"
-  password: "langfuse-pg-demo-2026"

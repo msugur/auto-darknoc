@@ -30,58 +30,34 @@ SERVICENOW_URL = os.getenv(
     "SERVICENOW_URL",
     "http://servicenow-mock.dark-noc-servicenow-mock.svc:8080",
 )
-SERVICENOW_API_KEY = os.getenv("SERVICENOW_API_KEY", "demo-api-key-2026")
+SERVICENOW_API_KEY = os.getenv("SERVICENOW_API_KEY", "")
 SERVICENOW_MODE = os.getenv("SERVICENOW_MODE", "mock").lower()  # mock|real
 SERVICENOW_USERNAME = os.getenv("SERVICENOW_USERNAME", "")
 SERVICENOW_PASSWORD = os.getenv("SERVICENOW_PASSWORD", "")
-SLACK_WORKSPACE_URL = os.getenv("SLACK_WORKSPACE_URL", "https://octo-emerging-tech.slack.com")
-SERVICENOW_UI_URL = os.getenv("SERVICENOW_UI_URL", "https://dev365997.service-now.com/incident_list.do")
-OPENSHIFT_CONSOLE_URL = os.getenv(
-    "OPENSHIFT_CONSOLE_URL",
-    "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com",
-)
-OPENSHIFT_EDGE_CONSOLE_URL = os.getenv(
-    "OPENSHIFT_EDGE_CONSOLE_URL",
-    "https://console-openshift-console.apps.ocp.cgsdl.sandbox2776.opentlc.com",
-)
-AAP_UI_URL = os.getenv(
-    "AAP_UI_URL",
-    "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com",
-)
-AAP_LIGHTSPEED_URL = os.getenv(
-    "AAP_LIGHTSPEED_URL",
-    "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com/#/templates",
-)
-GRAFANA_URL = os.getenv(
-    "GRAFANA_URL",
-    "https://grafana-dark-noc-grafana.apps.ocp.v8w9c.sandbox205.opentlc.com",
-)
-LANGFUSE_URL = os.getenv(
-    "LANGFUSE_URL",
-    "https://langfuse-dark-noc-observability.apps.ocp.v8w9c.sandbox205.opentlc.com",
-)
-KAFKA_UI_URL = os.getenv(
-    "KAFKA_UI_URL",
-    "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod",
-)
-LOKI_UI_URL = os.getenv(
-    "LOKI_UI_URL",
-    "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/monitoring/logs",
-)
-OPENSHIFT_USERNAME = os.getenv("OPENSHIFT_USERNAME", "admin")
-OPENSHIFT_PASSWORD = os.getenv("OPENSHIFT_PASSWORD", "qCyH8I67Ry")
-OPENSHIFT_EDGE_USERNAME = os.getenv("OPENSHIFT_EDGE_USERNAME", "admin")
-OPENSHIFT_EDGE_PASSWORD = os.getenv("OPENSHIFT_EDGE_PASSWORD", "use-token-login")
-AAP_UI_USERNAME = os.getenv("AAP_UI_USERNAME", "admin")
-AAP_UI_PASSWORD = os.getenv("AAP_UI_PASSWORD", "redhat")
-KAFKA_UI_USERNAME = os.getenv("KAFKA_UI_USERNAME", "admin")
-KAFKA_UI_PASSWORD = os.getenv("KAFKA_UI_PASSWORD", "use-cluster-admin-login")
-SERVICENOW_UI_USERNAME = os.getenv("SERVICENOW_UI_USERNAME", "admin")
-SERVICENOW_UI_PASSWORD = os.getenv("SERVICENOW_UI_PASSWORD", "D$*REPLACE_WITH_SERVICENOW_PASSWORD")
-GRAFANA_UI_USERNAME = os.getenv("GRAFANA_UI_USERNAME", "admin")
-GRAFANA_UI_PASSWORD = os.getenv("GRAFANA_UI_PASSWORD", "redhat")
-LANGFUSE_UI_USERNAME = os.getenv("LANGFUSE_UI_USERNAME", "admin")
-LANGFUSE_UI_PASSWORD = os.getenv("LANGFUSE_UI_PASSWORD", "redhat")
+SLACK_WORKSPACE_URL = os.getenv("SLACK_WORKSPACE_URL", "")
+SERVICENOW_UI_URL = os.getenv("SERVICENOW_UI_URL", "")
+OPENSHIFT_CONSOLE_URL = os.getenv("OPENSHIFT_CONSOLE_URL", "")
+OPENSHIFT_EDGE_CONSOLE_URL = os.getenv("OPENSHIFT_EDGE_CONSOLE_URL", "")
+AAP_UI_URL = os.getenv("AAP_UI_URL", "")
+AAP_LIGHTSPEED_URL = os.getenv("AAP_LIGHTSPEED_URL", "")
+GRAFANA_URL = os.getenv("GRAFANA_URL", "")
+LANGFUSE_URL = os.getenv("LANGFUSE_URL", "")
+KAFKA_UI_URL = os.getenv("KAFKA_UI_URL", "")
+LOKI_UI_URL = os.getenv("LOKI_UI_URL", "")
+OPENSHIFT_USERNAME = os.getenv("OPENSHIFT_USERNAME", "")
+OPENSHIFT_PASSWORD = os.getenv("OPENSHIFT_PASSWORD", "")
+OPENSHIFT_EDGE_USERNAME = os.getenv("OPENSHIFT_EDGE_USERNAME", "")
+OPENSHIFT_EDGE_PASSWORD = os.getenv("OPENSHIFT_EDGE_PASSWORD", "")
+AAP_UI_USERNAME = os.getenv("AAP_UI_USERNAME", "")
+AAP_UI_PASSWORD = os.getenv("AAP_UI_PASSWORD", "")
+KAFKA_UI_USERNAME = os.getenv("KAFKA_UI_USERNAME", "")
+KAFKA_UI_PASSWORD = os.getenv("KAFKA_UI_PASSWORD", "")
+SERVICENOW_UI_USERNAME = os.getenv("SERVICENOW_UI_USERNAME", "")
+SERVICENOW_UI_PASSWORD = os.getenv("SERVICENOW_UI_PASSWORD", "")
+GRAFANA_UI_USERNAME = os.getenv("GRAFANA_UI_USERNAME", "")
+GRAFANA_UI_PASSWORD = os.getenv("GRAFANA_UI_PASSWORD", "")
+LANGFUSE_UI_USERNAME = os.getenv("LANGFUSE_UI_USERNAME", "")
+LANGFUSE_UI_PASSWORD = os.getenv("LANGFUSE_UI_PASSWORD", "")
 SLACK_UI_USERNAME = os.getenv("SLACK_UI_USERNAME", "")
 SLACK_UI_PASSWORD = os.getenv("SLACK_UI_PASSWORD", "")
 MCP_OPENSHIFT_URL = os.getenv("MCP_OPENSHIFT_URL", "http://mcp-openshift.dark-noc-mcp.svc:8001")
@@ -927,11 +903,11 @@ async def trigger_demo(req: DemoTriggerRequest) -> dict:
         "event_message": event["message"],
         "next_steps": next_steps,
         "links": {
-            "dashboard": "https://dark-noc-dashboard-dark-noc-ui.apps.ocp.v8w9c.sandbox205.opentlc.com",
+            "dashboard": os.getenv("DASHBOARD_URL", ""),
             "aap_jobs": f"{AAP_UI_URL}/#/jobs",
             "servicenow_incidents": SERVICENOW_UI_URL,
             "slack": SLACK_WORKSPACE_URL,
-            "langfuse": "https://langfuse-dark-noc-observability.apps.ocp.v8w9c.sandbox205.opentlc.com",
+            "langfuse": LANGFUSE_URL,
         },
     }
 

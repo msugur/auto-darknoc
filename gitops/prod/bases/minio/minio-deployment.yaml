@@ -13,8 +13,7 @@
 #
 # CREDENTIALS:
 #   Set via environment vars from minio-secret.
-#   Default for demo: admin / darknoc-minio-secret
-#   Change before sharing demo credentials externally.
+#   Provide credentials using external secret templates.
 #
 # RESOURCE SIZING:
 #   Demo MinIO: 200m CPU, 256Mi RAM — very light
@@ -27,22 +26,6 @@
 #   oc get pods -n dark-noc-minio
 #   curl http://minio.dark-noc-minio.svc:9000/minio/health/live
 # =============================================================
----
-# Secret — MinIO credentials
-# Apply this first. In production, use Sealed Secrets or Vault.
-apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-secret
-  namespace: dark-noc-minio
-  labels:
-    app: minio
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  MINIO_ROOT_USER: "admin"
-  MINIO_ROOT_PASSWORD: "darknoc-minio-secret"    # Change for your demo
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -90,15 +90,3 @@ spec:
     limits:
       cpu: 1000m
       memory: 1Gi
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: pgvector-superuser
-  namespace: dark-noc-rag
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  username: "noc_agent"
-  password: "pgvector-noc-demo-2026"

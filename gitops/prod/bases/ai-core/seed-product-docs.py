@@ -24,7 +24,7 @@ PG_HOST = os.getenv("PGVECTOR_HOST", "pgvector-postgres-rw.dark-noc-rag.svc")
 PG_PORT = int(os.getenv("PGVECTOR_PORT", "5432"))
 PG_DB = os.getenv("PGVECTOR_DB", "noc_rag")
 PG_USER = os.getenv("PGVECTOR_USER", "noc_agent")
-PG_PASSWORD = os.getenv("PGVECTOR_PASSWORD", "pgvector-noc-demo-2026")
+PG_PASSWORD = os.getenv("PGVECTOR_PASSWORD", "")
 
 SOURCES_FILE = os.getenv("DOC_SOURCES_FILE", "/config/documentation-sources.yaml")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")

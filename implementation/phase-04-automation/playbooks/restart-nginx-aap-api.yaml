@@ -7,7 +7,7 @@
   vars:
     edge_namespace: "{{ edge_namespace | default('dark-noc-edge') }}"
     deployment: "{{ deployment | default('nginx') }}"
-    edge_api_url: "{{ edge_api_url | default('https://api.ocp.cgsdl.sandbox2776.opentlc.com:6443') }}"
+    edge_api_url: "{{ edge_api_url | default('REPLACE_WITH_EDGE_API_URL') }}"
     edge_token: "{{ edge_token | default('') }}"
 
   tasks:

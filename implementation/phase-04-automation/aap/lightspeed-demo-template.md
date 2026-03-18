@@ -30,8 +30,8 @@ Lightspeed-assisted playbook generation + execution workflow.
 Use the controller API to verify template exists:
 
 ```bash
-curl -ksS -u "admin:redhat" \
-  "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com/api/controller/v2/job_templates/?name=lightspeed-generate-and-run" \
+curl -ksS -u "admin:<AAP_PASSWORD>" \
+  "https://<AAP_CONTROLLER_ROUTE>/api/controller/v2/job_templates/?name=lightspeed-generate-and-run" \
   | jq -r '.count, (.results[]?.id // empty), (.results[]?.name // empty)'
 ```
 
