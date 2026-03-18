@@ -29,8 +29,8 @@ metadata:
   namespace: dark-noc-grafana
 type: Opaque
 stringData:
-  admin-user: admin
-  admin-password: redhat
+  admin-user: REPLACE_WITH_GRAFANA_ADMIN_USER
+  admin-password: REPLACE_WITH_GRAFANA_ADMIN_PASSWORD
 ---
 apiVersion: apps/v1
 kind: Deployment

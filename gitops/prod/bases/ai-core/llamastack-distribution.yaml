@@ -35,15 +35,24 @@ spec:
         - name: POSTGRES_USER
           value: "langfuse"
         - name: POSTGRES_PASSWORD
-          value: "langfuse-pg-demo-2026"
+          valueFrom:
+            secretKeyRef:
+              name: ai-runtime-secrets
+              key: LLAMASTACK_POSTGRES_PASSWORD
         - name: VLLM_URL
           value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1"
         - name: VLLM_API_TOKEN
-          value: "fake"
+          valueFrom:
+            secretKeyRef:
+              name: ai-runtime-secrets
+              key: VLLM_API_TOKEN
         - name: VLLM_EMBEDDING_URL
           value: "http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1"
         - name: VLLM_EMBEDDING_API_TOKEN
-          value: "fake"
+          valueFrom:
+            secretKeyRef:
+              name: ai-runtime-secrets
+              key: VLLM_EMBEDDING_API_TOKEN
         - name: INFERENCE_MODEL
           value: "llama-32-3b-instruct"
       resources:

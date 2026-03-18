@@ -33,23 +33,6 @@
 #   oc get lokistack -n openshift-logging
 #   oc get pods -n openshift-logging -l app.kubernetes.io/name=loki
 # =============================================================
----
-# Secret for MinIO access (LokiStack uses S3 API)
-apiVersion: v1
-kind: Secret
-metadata:
-  name: minio-loki-secret
-  namespace: openshift-logging
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  access_key_id: "admin"
-  access_key_secret: "darknoc-minio-secret"    # Match minio-secret
-  bucketnames: "loki-chunks"
-  endpoint: "http://minio.dark-noc-minio.svc:9000"
-  region: "us-east-1"    # MinIO ignores region but requires the field
----
 apiVersion: loki.grafana.com/v1
 kind: LokiStack
 metadata:

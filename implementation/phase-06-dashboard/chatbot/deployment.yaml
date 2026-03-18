@@ -24,67 +24,67 @@ spec:
             - containerPort: 8080
           env:
             - name: SERVICENOW_URL
-              value: "https://dev365997.service-now.com"
+              value: "REPLACE_WITH_SERVICENOW_URL"
             - name: SERVICENOW_MODE
               value: "real"
             - name: SERVICENOW_USERNAME
-              value: "admin"
+              value: "REPLACE_WITH_SERVICENOW_USERNAME"
             - name: SERVICENOW_PASSWORD
-              value: "D$*REPLACE_WITH_SERVICENOW_PASSWORD"
+              value: "REPLACE_WITH_SERVICENOW_PASSWORD"
             - name: SERVICENOW_API_KEY
-              value: "demo-api-key-2026"
+              value: ""
             - name: SERVICENOW_UI_URL
-              value: "https://dev365997.service-now.com/incident_list.do"
+              value: "REPLACE_WITH_SERVICENOW_INCIDENTS_URL"
             - name: SERVICENOW_UI_USERNAME
-              value: "admin"
+              value: "REPLACE_WITH_SERVICENOW_USERNAME"
             - name: SERVICENOW_UI_PASSWORD
-              value: "D$*REPLACE_WITH_SERVICENOW_PASSWORD"
+              value: "REPLACE_WITH_SERVICENOW_PASSWORD"
             - name: SLACK_WORKSPACE_URL
-              value: "https://octo-emerging-tech.slack.com"
+              value: "REPLACE_WITH_SLACK_WORKSPACE_URL"
             - name: SLACK_UI_USERNAME
               value: ""
             - name: SLACK_UI_PASSWORD
               value: ""
             - name: OPENSHIFT_CONSOLE_URL
-              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com"
+              value: "REPLACE_WITH_HUB_CONSOLE_URL"
             - name: OPENSHIFT_EDGE_CONSOLE_URL
-              value: "https://console-openshift-console.apps.ocp.cgsdl.sandbox2776.opentlc.com"
+              value: "REPLACE_WITH_EDGE_CONSOLE_URL"
             - name: OPENSHIFT_USERNAME
               value: "admin"
             - name: OPENSHIFT_PASSWORD
-              value: "use-cluster-admin-login"
+              value: "REPLACE_WITH_HUB_CONSOLE_PASSWORD"
             - name: OPENSHIFT_EDGE_USERNAME
               value: "admin"
             - name: OPENSHIFT_EDGE_PASSWORD
-              value: "use-token-login"
+              value: "REPLACE_WITH_EDGE_CONSOLE_PASSWORD"
             - name: AAP_UI_URL
-              value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com"
+              value: "REPLACE_WITH_AAP_URL"
             - name: AAP_LIGHTSPEED_URL
-              value: "https://aap-enterprise-controller-aap.apps.ocp.v8w9c.sandbox205.opentlc.com/#/templates"
+              value: "REPLACE_WITH_AAP_LIGHTSPEED_URL"
             - name: AAP_UI_USERNAME
               value: "admin"
             - name: AAP_UI_PASSWORD
-              value: "redhat"
+              value: "REPLACE_WITH_AAP_PASSWORD"
             - name: GRAFANA_URL
-              value: "https://grafana-dark-noc-grafana.apps.ocp.v8w9c.sandbox205.opentlc.com"
+              value: "REPLACE_WITH_GRAFANA_URL"
             - name: GRAFANA_UI_USERNAME
               value: "admin"
             - name: GRAFANA_UI_PASSWORD
-              value: "redhat"
+              value: "REPLACE_WITH_GRAFANA_PASSWORD"
             - name: LANGFUSE_URL
-              value: "https://langfuse-dark-noc-observability.apps.ocp.v8w9c.sandbox205.opentlc.com"
+              value: "REPLACE_WITH_LANGFUSE_URL"
             - name: LANGFUSE_UI_USERNAME
               value: "admin"
             - name: LANGFUSE_UI_PASSWORD
-              value: "redhat"
+              value: "REPLACE_WITH_LANGFUSE_PASSWORD"
             - name: KAFKA_UI_URL
-              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/k8s/ns/dark-noc-kafka/core~v1~Pod"
+              value: "REPLACE_WITH_KAFKA_UI_URL"
             - name: KAFKA_UI_USERNAME
               value: "admin"
             - name: KAFKA_UI_PASSWORD
-              value: "use-cluster-admin-login"
+              value: "REPLACE_WITH_KAFKA_UI_PASSWORD"
             - name: LOKI_UI_URL
-              value: "https://console-openshift-console.apps.ocp.v8w9c.sandbox205.opentlc.com/monitoring/logs"
+              value: "REPLACE_WITH_LOKI_UI_URL"
             - name: AI_MODEL_NAME
               valueFrom:
                 configMapKeyRef:

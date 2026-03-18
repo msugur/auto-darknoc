@@ -15,4 +15,6 @@ Single production GitOps model for Hub + Edge OpenShift using Argo CD app-of-app
 - `stacks/`: hub/edge deployment stacks
 - `bases/`: vendored manifests from implementation phases
 - `secrets/`: placeholder templates (fill and apply as `.real.yaml`)
+- `secrets/`: all credentials/access are manual-input templates; no live secrets committed
 - `docs/`: operator deployment guides
+  - portability checklist: `docs/PORTABLE-DEPLOYMENT.md`

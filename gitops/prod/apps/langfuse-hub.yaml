@@ -54,7 +54,7 @@ spec:
               name: langfuse-secrets
               key: ENCRYPTION_KEY
           nextauth:
-            url: "https://langfuse-dark-noc-observability.apps.ocp.ms2b2.sandbox2859.opentlc.com"
+            url: "https://REPLACE_WITH_LANGFUSE_ROUTE"
             secret:
               secretKeyRef:
                 name: langfuse-secrets

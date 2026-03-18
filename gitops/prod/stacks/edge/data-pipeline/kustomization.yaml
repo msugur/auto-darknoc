@@ -12,4 +12,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/outputs/0/kafka/url
-        value: tls://dark-noc-kafka-kafka-bootstrap-dark-noc-kafka.apps.ocp.ms2b2.sandbox2859.opentlc.com:443
+        value: REPLACE_WITH_HUB_KAFKA_BOOTSTRAP_ROUTE

@@ -38,9 +38,6 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: quay.io/msugur/auto-darknoc:mcp-slack-gitsha
-      - op: replace
-        path: /spec/template/spec/containers/0/env/2/value
-        value: "#demos"
   - target:
       kind: Deployment
       name: mcp-servicenow
@@ -48,9 +45,6 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: quay.io/msugur/auto-darknoc:mcp-servicenow-gitsha
-      - op: replace
-        path: /spec/template/spec/containers/0/env/8/value
-        value: "#demos"
   - target:
       kind: Deployment
       name: dark-noc-agent

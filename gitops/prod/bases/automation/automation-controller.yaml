@@ -70,15 +70,3 @@ spec:
   ee_images:
     - name: "Dark NOC EE"
       image: quay.io/ansible/awx-ee:latest    # Replace with custom EE if needed
----
-# Admin password secret template (set a strong value before apply)
-apiVersion: v1
-kind: Secret
-metadata:
-  name: aap-admin-secret
-  namespace: aap
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  password: "<CHANGE-ME-STRONG-AAP-ADMIN-PASSWORD>"

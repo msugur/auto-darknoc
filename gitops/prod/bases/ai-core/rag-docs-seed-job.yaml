@@ -26,9 +26,15 @@ spec:
             - name: PGVECTOR_DB
               value: noc_rag
             - name: PGVECTOR_USER
-              value: noc_agent
+              valueFrom:
+                secretKeyRef:
+                  name: pgvector-superuser
+                  key: username
             - name: PGVECTOR_PASSWORD
-              value: pgvector-noc-demo-2026
+              valueFrom:
+                secretKeyRef:
+                  name: pgvector-superuser
+                  key: password
             - name: DOC_SOURCES_FILE
               value: /config/documentation-sources.yaml
             - name: PYTHONUNBUFFERED

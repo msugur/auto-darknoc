@@ -104,18 +104,3 @@ spec:
               command: ["python", "-c", "import sys; sys.exit(0)"]
             initialDelaySeconds: 30
             periodSeconds: 60
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: agent-secrets
-  namespace: dark-noc-hub
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-type: Opaque
-stringData:
-  PGVECTOR_URL: "postgresql://noc_agent:pgvector-noc-demo-2026@pgvector-postgres-rw.dark-noc-rag.svc:5432/noc_rag"
-  PG_CHECKPOINT_URL: "postgresql://langfuse:langfuse-pg-demo-2026@langfuse-postgres-rw.dark-noc-observability.svc:5432/langfuse"
-  LANGFUSE_PUBLIC_KEY: ""
-  LANGFUSE_SECRET_KEY: ""
-  LANGFUSE_HOST: "http://langfuse.dark-noc-observability.svc:3000"

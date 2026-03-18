@@ -2,8 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { StatusCard } from "./components/StatusCard";
 import { ChatPanel } from "./components/ChatPanel";
 
-const CHATBOT_URL =
-  "https://dark-noc-chatbot-dark-noc-ui.apps.ocp.v8w9c.sandbox205.opentlc.com";
+function resolveChatbotUrl() {
+  const env =
+    (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_CHATBOT_URL
+      ? import.meta.env.VITE_CHATBOT_URL
+      : "").trim();
+  if (env) return env;
+  if (typeof window === "undefined") return "";
+  const origin = window.location.origin;
+  if (origin.includes("dark-noc-dashboard-")) {
+    return origin.replace("dark-noc-dashboard-", "dark-noc-chatbot-");
+  }
+  return origin;
+}
+
+const CHATBOT_URL = resolveChatbotUrl();
 
 export default function App() {
   const [summary, setSummary] = useState({
