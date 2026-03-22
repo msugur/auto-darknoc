@@ -2,23 +2,37 @@ import { useEffect, useMemo, useState } from "react";
 import { StatusCard } from "./components/StatusCard";
 import { ChatPanel } from "./components/ChatPanel";
 
-function resolveChatbotUrl() {
+function buildChatbotCandidates() {
+  const candidates = [""];
   const env =
     (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_CHATBOT_URL
       ? import.meta.env.VITE_CHATBOT_URL
       : "").trim();
-  if (env) return env;
-  if (typeof window === "undefined") return "";
+  if (env) candidates.push(env);
+  if (typeof window === "undefined") return candidates;
   const origin = window.location.origin;
+  candidates.push(origin);
   if (origin.includes("dark-noc-dashboard-")) {
-    return origin.replace("dark-noc-dashboard-", "dark-noc-chatbot-");
+    candidates.unshift(origin.replace("dark-noc-dashboard-", "dark-noc-chatbot-"));
   }
-  return origin;
+  try {
+    const { hostname, protocol } = window.location;
+    const labels = hostname.split(".");
+    if (labels.length > 1 && labels[0] !== "dark-noc-chatbot-dark-noc-ui") {
+      const clusterDomain = labels.slice(1).join(".");
+      candidates.push(`${protocol}//dark-noc-chatbot-dark-noc-ui.${clusterDomain}`);
+    }
+  } catch {
+    // Keep defaults if host parsing fails.
+  }
+
+  return [...new Set(candidates)];
 }
 
-const CHATBOT_URL = resolveChatbotUrl();
+const CHATBOT_CANDIDATES = buildChatbotCandidates();
 
 export default function App() {
+  const [chatbotBase, setChatbotBase] = useState(() => CHATBOT_CANDIDATES[0] || "");
   const [summary, setSummary] = useState({
     agent_status: "unknown",
     cluster: "hub",
@@ -130,19 +144,38 @@ export default function App() {
   useEffect(() => {
     let active = true;
 
+    async function fetchFrom(base, path) {
+      const url = base ? `${base}${path}` : path;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Request failed: ${res.status} ${path}`);
+      return res.json();
+    }
+
     async function fetchSummary() {
       try {
-        const [summaryRes, integrationRes] = await Promise.all([
-          fetch(`${CHATBOT_URL}/api/summary`),
-          fetch(`${CHATBOT_URL}/api/integrations`)
-        ]);
-        const [summaryData, integrationData] = await Promise.all([
-          summaryRes.json(),
-          integrationRes.json()
-        ]);
-        if (active) {
-          setSummary(summaryData);
-          setIntegrations(integrationData);
+        const searchOrder = chatbotBase
+          ? [chatbotBase, ...CHATBOT_CANDIDATES.filter((url) => url !== chatbotBase)]
+          : CHATBOT_CANDIDATES;
+        let lastError = null;
+
+        for (const base of searchOrder) {
+          try {
+            const [summaryData, integrationData] = await Promise.all([
+              fetchFrom(base, "/api/summary"),
+              fetchFrom(base, "/api/integrations")
+            ]);
+            if (active) {
+              setSummary(summaryData);
+              setIntegrations(integrationData);
+              setChatbotBase(base);
+            }
+            return;
+          } catch (err) {
+            lastError = err;
+          }
+        }
+        if (lastError) {
+          throw lastError;
         }
       } catch {
         if (active) {
@@ -165,7 +198,8 @@ export default function App() {
     setDemoLoading(true);
     setDemoError("");
     try {
-      const res = await fetch(`${CHATBOT_URL}/api/demo/trigger`, {
+      const target = chatbotBase ? `${chatbotBase}/api/demo/trigger` : "/api/demo/trigger";
+      const res = await fetch(target, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenario, site: "edge-01" })
@@ -624,7 +658,7 @@ export default function App() {
         )}
       </section>
 
-      <ChatPanel apiBase={CHATBOT_URL} />
+      <ChatPanel apiBase={chatbotBase} />
     </main>
   );
 }

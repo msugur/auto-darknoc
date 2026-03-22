@@ -1,0 +1,90 @@
+{
+  "id": null,
+  "uid": "darknoc-slo-operational",
+  "title": "SLO Dashboard (Operational Proxies)",
+  "tags": ["dark-noc", "slo", "reliability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "style": "dark",
+  "time": {"from": "now-24h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Availability SLO",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * avg(up{namespace=~\"dark-noc-hub|dark-noc-mcp|dark-noc-observability|dark-noc-ui\"})", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 2, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 99}, {"color": "green", "value": 99.5}]}}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error Budget Burn (Proxy, 24h)",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * (1 - avg_over_time(avg(up{namespace=~\"dark-noc-hub|dark-noc-mcp|dark-noc-observability|dark-noc-ui\"})[24h:5m])) / 0.005", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 150}]}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "MTTR Proxy (Restart Recovery, 24h)",
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "avg_over_time((sum(increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[5m])) > bool 0)[24h:5m]) * 300", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 0}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Incident Rate (Proxy, events/hour)",
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[1h]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Availability Trend (%)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * avg(up{namespace=~\"dark-noc-hub|dark-noc-mcp|dark-noc-observability|dark-noc-ui\"})", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Restart Events (5m buckets)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[5m]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "AAP Job Success Rate (%)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (sum(increase(kube_job_status_succeeded{namespace=\"aap\"}[1h])) / clamp_min(sum(increase(kube_job_status_succeeded{namespace=\"aap\"}[1h])) + sum(increase(kube_job_status_failed{namespace=\"aap\"}[1h])), 1))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "SLO Risk Contributors (Top Restarting Pods, 24h)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "topk(20, sum by (namespace,pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[24h])))", "format": "table", "instant": true, "refId": "A"}]
+    }
+  ]
+}

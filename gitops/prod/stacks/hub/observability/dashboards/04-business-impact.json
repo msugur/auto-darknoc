@@ -1,0 +1,84 @@
+{
+  "id": null,
+  "uid": "darknoc-business-impact",
+  "title": "Business Impact (Operational Proxies)",
+  "tags": ["dark-noc", "business-impact", "executive"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "style": "dark",
+  "time": {"from": "now-24h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Incidents Processed (Proxy, 24h)",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[24h]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Automation Success Rate (AAP Jobs, 24h)",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "expr": "100 * (sum(increase(kube_job_status_succeeded{namespace=\"aap\"}[24h])) / clamp_min(sum(increase(kube_job_status_succeeded{namespace=\"aap\"}[24h])) + sum(increase(kube_job_status_failed{namespace=\"aap\"}[24h])), 1))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}]}}}
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Human Escalation Pressure (Jobs Failed, 24h)",
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(kube_job_status_failed{namespace=\"aap\"}[24h]))", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}}}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Platform Availability (Hub Services)",
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * avg(up{namespace=~\"dark-noc-hub|dark-noc-mcp|dark-noc-observability|dark-noc-ui\"})", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 95}, {"color": "green", "value": 99}]}}}
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "AAP Job Outcomes (24h rolling)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(increase(kube_job_status_succeeded{namespace=\"aap\"}[1h]))", "legendFormat": "succeeded", "refId": "A"},
+        {"expr": "sum(increase(kube_job_status_failed{namespace=\"aap\"}[1h]))", "legendFormat": "failed", "refId": "B"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Restart Events by Namespace (proxy for incident load)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[1h]))", "legendFormat": "{{namespace}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Most Unstable Workloads (24h restarts)",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "topk(15, sum by (namespace,pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"dark-noc-.*|my-first-model\"}[24h])))", "format": "table", "instant": true, "refId": "A"}]
+    }
+  ]
+}

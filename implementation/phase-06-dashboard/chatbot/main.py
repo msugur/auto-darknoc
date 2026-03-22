@@ -125,6 +125,84 @@ def parse_iso8601(value: str | None) -> datetime | None:
         return None
 
 
+def extract_event_timestamp(payload: dict[str, Any]) -> str:
+    for key in ("timestamp", "@timestamp", "time", "ts"):
+        raw = payload.get(key)
+        if raw:
+            return str(raw)
+    return ""
+
+
+def normalize_incident_record(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Normalize incident record variants into one shape consumed by SLO/movie builders.
+    Supports direct records and nested event/payload envelopes.
+    """
+    event = payload
+    if isinstance(payload.get("event"), dict):
+        event = payload["event"]
+    elif isinstance(payload.get("payload"), dict):
+        event = payload["payload"]
+
+    labels = event.get("labels") if isinstance(event.get("labels"), dict) else {}
+    message = str(event.get("message", "") or payload.get("message", "") or "")
+    scenario = str(
+        event.get("failure_type")
+        or labels.get("dark_noc_scenario")
+        or "unknown"
+    )
+    remediation_action = str(
+        event.get("remediation_action")
+        or payload.get("remediation_action")
+        or "detected"
+    )
+    remediation_success = bool(
+        event.get("remediation_success", payload.get("remediation_success", False))
+    )
+    servicenow_ticket = str(
+        event.get("servicenow_ticket")
+        or payload.get("servicenow_ticket")
+        or ""
+    )
+    aap_job_id = str(event.get("aap_job_id") or payload.get("aap_job_id") or "")
+    confidence = float(event.get("ai_confidence") or payload.get("ai_confidence") or 0)
+    duration_ms = float(
+        event.get("total_duration_ms") or payload.get("total_duration_ms") or 0
+    )
+    edge_site = str(
+        event.get("edge_site_id")
+        or payload.get("edge_site_id")
+        or labels.get("edge_site_id")
+        or "edge-01"
+    )
+
+    ts = extract_event_timestamp(event) or extract_event_timestamp(payload)
+    incident_id = str(
+        event.get("incident_id")
+        or payload.get("incident_id")
+        or f"evt-{abs(hash(ts + message)) % 10_000_000}"
+    )
+    severity = str(
+        event.get("severity")
+        or payload.get("severity")
+        or ("high" if "error" in str(event.get("level", "")).lower() else "medium")
+    )
+
+    return {
+        "timestamp": ts,
+        "incident_id": incident_id,
+        "failure_type": scenario,
+        "severity": severity,
+        "remediation_action": remediation_action,
+        "remediation_success": remediation_success,
+        "servicenow_ticket": servicenow_ticket,
+        "aap_job_id": aap_job_id,
+        "edge_site_id": edge_site,
+        "ai_confidence": confidence,
+        "total_duration_ms": duration_ms,
+    }
+
+
 def is_real_servicenow() -> bool:
     return SERVICENOW_MODE == "real" or bool(SERVICENOW_USERNAME and SERVICENOW_PASSWORD)
 
@@ -350,15 +428,19 @@ def fetch_recent_incident_audits() -> list[dict[str, Any]]:
     Read recent incident-audit records directly from Kafka.
     Uses end-offset seek to avoid scanning full topic.
     """
-    consumer = KafkaConsumer(
-        SLO_AUDIT_TOPIC,
-        bootstrap_servers=DEMO_KAFKA_BOOTSTRAP,
-        auto_offset_reset="latest",
-        enable_auto_commit=False,
-        consumer_timeout_ms=2500,
-        value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
-    )
     records: list[dict[str, Any]] = []
+    try:
+        consumer = KafkaConsumer(
+            SLO_AUDIT_TOPIC,
+            bootstrap_servers=DEMO_KAFKA_BOOTSTRAP,
+            auto_offset_reset="latest",
+            enable_auto_commit=False,
+            consumer_timeout_ms=2500,
+            value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
+        )
+    except Exception:
+        return records
+
     try:
         consumer.poll(timeout_ms=800)
         partitions = consumer.assignment()
@@ -379,15 +461,72 @@ def fetch_recent_incident_audits() -> list[dict[str, Any]]:
             except Exception:
                 continue
 
-            ts = parse_iso8601(str(data.get("timestamp", "")))
+            normalized = normalize_incident_record(data)
+            ts = parse_iso8601(normalized.get("timestamp"))
             if ts and ts.timestamp() >= cutoff:
-                records.append(data)
+                records.append(normalized)
             elif not ts:
                 # Keep malformed timestamp records to avoid dropping live metrics completely.
-                records.append(data)
+                records.append(normalized)
 
             if len(records) >= SLO_MAX_MESSAGES:
                 break
+    except Exception:
+        return records
+    finally:
+        consumer.close()
+    return records
+
+
+def fetch_recent_demo_incidents() -> list[dict[str, Any]]:
+    """
+    Fallback source for live incident trail when incident-audit is empty.
+    Reads recent demo/edge log events from DEMO_TOPIC and normalizes them.
+    """
+    records: list[dict[str, Any]] = []
+    try:
+        consumer = KafkaConsumer(
+            DEMO_TOPIC,
+            bootstrap_servers=DEMO_KAFKA_BOOTSTRAP,
+            auto_offset_reset="latest",
+            enable_auto_commit=False,
+            consumer_timeout_ms=2000,
+            value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
+        )
+    except Exception:
+        return records
+
+    try:
+        consumer.poll(timeout_ms=600)
+        partitions = consumer.assignment()
+        if not partitions:
+            return records
+
+        max_per_partition = max(20, int(min(150, SLO_MAX_MESSAGES) / max(1, len(partitions))))
+        for tp in partitions:
+            end_offset = consumer.end_offsets([tp])[tp]
+            start_offset = max(0, end_offset - max_per_partition)
+            consumer.seek(tp, start_offset)
+
+        cutoff = datetime.now(timezone.utc).timestamp() - (SLO_LOOKBACK_HOURS * 3600)
+        for msg in consumer:
+            try:
+                data = json.loads(msg.value)
+            except Exception:
+                continue
+
+            normalized = normalize_incident_record(data)
+            ts = parse_iso8601(normalized.get("timestamp"))
+            if ts and ts.timestamp() < cutoff:
+                continue
+            if normalized.get("failure_type") == "unknown" and not data.get("labels", {}).get("dark_noc_demo"):
+                continue
+
+            records.append(normalized)
+            if len(records) >= min(150, SLO_MAX_MESSAGES):
+                break
+    except Exception:
+        return records
     finally:
         consumer.close()
     return records
@@ -512,7 +651,9 @@ def build_incident_movie_and_impact(records: list[dict[str, Any]], slo_metrics: 
             confidence_vals.append(confidence)
 
         stage = "Escalated"
-        if success and not servicenow_ticket:
+        if not success and not servicenow_ticket and action.lower() in {"detected", "n/a", "none", ""}:
+            stage = "Detected"
+        elif success and not servicenow_ticket:
             stage = "Auto-Remediated"
         elif success:
             stage = "Remediated"
@@ -768,6 +909,8 @@ async def _build_integrations_payload() -> dict[str, Any]:
         )
 
     audits = fetch_recent_incident_audits()
+    if not audits:
+        audits = fetch_recent_demo_incidents()
     slo_metrics = compute_slo_metrics(audits, up_count, len(integrations))
     incident_movie, business_impact = build_incident_movie_and_impact(audits, slo_metrics)
 
