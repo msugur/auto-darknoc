@@ -9,11 +9,11 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: quay.io/msugur/auto-darknoc:chatbot-gitsha
+        value: quay.io/msugur/auto-darknoc:chatbot-d851947
   - target:
       kind: Deployment
       name: dark-noc-dashboard
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: quay.io/msugur/auto-darknoc:dashboard-gitsha
+        value: quay.io/msugur/auto-darknoc:dashboard-d851947
