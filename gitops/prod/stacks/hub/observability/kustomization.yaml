@@ -16,3 +16,5 @@ configMapGenerator:
       - dashboards/01-exec-overview.json
       - dashboards/02-llm-gpu-performance.json
       - dashboards/03-langfuse-operations.json
+      - dashboards/04-business-impact.json
+      - dashboards/05-slo-operational.json
