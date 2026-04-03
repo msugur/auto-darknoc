@@ -1,6 +1,5 @@
 # ============================================
 # Dark NOC .gitignore
-# ============================================
 
 # ---- Secrets & Credentials (NEVER commit) ----
 configs/hub/env.sh
@@ -23,11 +22,9 @@ langfuse-keys.txt
 *.crt
 *.p12
 *.pfx
-
 # ---- Session Logs (auto-generated, large) ----
 logs/sessions/*.log
 logs/sessions/*.txt
-
 # ---- Python ----
 __pycache__/
 *.py[cod]
@@ -42,11 +39,8 @@ build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
 # ---- Node / React ----
 node_modules/
-dist/
-build/
 .next/
 .nuxt/
 *.tsbuildinfo
@@ -54,7 +48,6 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
-
 # ---- IDE ----
 .vscode/
 .idea/
@@ -63,31 +56,27 @@ build/
 *~
 .DS_Store
 Thumbs.db
-
 # ---- Helm ----
 charts/*/charts/
 *.tgz
-
 # ---- Temporary ----
 tmp/
 temp/
 *.tmp
 *.bak
 *.orig
-
 # ---- Model weights (too large for git) ----
 models/
 *.bin
 *.safetensors
 *.gguf
 *.ggml
-
 # ---- OS ----
-.DS_Store
 .AppleDouble
 .LSOverride
-
 # GitOps real secrets
 !gitops/prod/secrets/
 gitops/prod/secrets/*.real.yaml
 !gitops/prod/secrets/*.template.yaml
+# Generated runtime access report (do not commit)
+gitops/prod/docs/ACCESS-CENTER.masked.md
