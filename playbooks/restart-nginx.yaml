@@ -10,14 +10,15 @@
     edge_cluster: "{{ edge_cluster | default('edge-01') }}"
     edge_api_url_from_env: "{{ lookup('env', 'K8S_AUTH_HOST') | default('', true) }}"
     edge_token_from_env: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default('', true) }}"
-    edge_verify_ssl_raw: "{{ edge_verify_ssl | default(lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('false', true), true) }}"
-    edge_verify_ssl: "{{ edge_verify_ssl_raw | string | lower in ['1', 'true', 'yes', 'on'] }}"
+    edge_verify_ssl_from_env: "{{ lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('false', true) }}"
 
   tasks:
     - name: Resolve effective edge API auth values
       ansible.builtin.set_fact:
         edge_api_url_effective: "{{ edge_api_url | default(edge_api_url_from_env, true) }}"
         edge_token_effective: "{{ edge_token | default(edge_token_from_env, true) }}"
+        edge_verify_ssl_effective: "{{ edge_verify_ssl | default(edge_verify_ssl_from_env, true) }}"
+        edge_verify_ssl_bool: "{{ (edge_verify_ssl | default(edge_verify_ssl_from_env, true) | string | lower) in ['1', 'true', 'yes', 'on'] }}"
 
     - name: Ensure edge API auth is available
       ansible.builtin.assert:
@@ -39,7 +40,7 @@
         method: GET
         headers:
           Authorization: "Bearer {{ edge_token_effective }}"
-        validate_certs: "{{ edge_verify_ssl }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
         return_content: true
         status_code: 200
       register: deploy_before
@@ -63,7 +64,7 @@
               metadata:
                 annotations:
                   kubectl.kubernetes.io/restartedAt: "{{ restart_ts }}"
-        validate_certs: "{{ edge_verify_ssl }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
         return_content: true
         status_code: 200
       register: deploy_patch
@@ -74,7 +75,7 @@
         method: GET
         headers:
           Authorization: "Bearer {{ edge_token_effective }}"
-        validate_certs: "{{ edge_verify_ssl }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
         return_content: true
         status_code: 200
       register: deploy_after
