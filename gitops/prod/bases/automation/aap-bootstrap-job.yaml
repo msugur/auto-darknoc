@@ -25,9 +25,9 @@ spec:
                   name: aap-enterprise-controller-admin-password
                   key: password
             - name: DEMO_SCM_URL
-              value: "https://github.com/ansible/ansible-tower-samples"
+              value: "https://github.com/msugur/auto-darknoc"
             - name: DEMO_SCM_BRANCH
-              value: "master"
+              value: "main"
             - name: EDGE_API_URL
               valueFrom:
                 secretKeyRef:
@@ -93,17 +93,19 @@ spec:
 
               def ensure_project(name):
                   p = by_name("projects", name)
+                  desired = {
+                      "name": name,
+                      "organization": 1,
+                      "scm_type": "git",
+                      "scm_url": scm_url,
+                      "scm_branch": scm_branch,
+                      "scm_update_on_launch": True,
+                  }
                   if not p:
-                      p = post("projects", {
-                          "name": name,
-                          "organization": 1,
-                          "scm_type": "git",
-                          "scm_url": scm_url,
-                          "scm_branch": scm_branch,
-                          "scm_update_on_launch": True,
-                      })
+                      p = post("projects", desired)
                       print(f"created project {name}: {p.get('id')}")
                   else:
+                      patch("projects", int(p["id"]), desired)
                       print(f"existing project {name}: {p.get('id')}")
 
                   try:
@@ -130,7 +132,7 @@ spec:
                       print("added localhost host")
                   return int(inv["id"])
 
-              def ensure_template(name, project_id, inventory_id, playbook):
+              def ensure_template(name, project_id, inventory_id, playbook, fallback_playbook=None):
                   jt = by_name("job_templates", name)
                   payload = {
                       "name": name,
@@ -148,8 +150,10 @@ spec:
                           patch("job_templates", int(jt["id"]), payload)
                           print(f"updated template {name}: {jt.get('id')}")
                   except Exception as e:
-                      print(f"template bootstrap warning for {name} ({playbook}): {e}; retrying with hello_world.yml")
-                      payload["playbook"] = "hello_world.yml"
+                      if not fallback_playbook:
+                          raise
+                      print(f"template bootstrap warning for {name} ({playbook}): {e}; retrying with {fallback_playbook}")
+                      payload["playbook"] = fallback_playbook
                       if not jt:
                           jt = post("job_templates", payload)
                           print(f"created template {name} with fallback playbook: {jt.get('id')}")
@@ -202,7 +206,7 @@ spec:
               inventory_id = ensure_inventory("Demo Inventory")
               edge_cred_id = ensure_edge_credential()
               hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
-              restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml")
+              restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml", None)
               lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
               associate_credential(restart_id, edge_cred_id)
               associate_credential(lightspeed_id, edge_cred_id)
