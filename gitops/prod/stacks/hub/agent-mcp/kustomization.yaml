@@ -11,6 +11,13 @@ generatorOptions:
   disableNameSuffixHash: true
 patches:
   - target:
+      kind: ConfigMap
+      name: dark-noc-agent-code
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: dark-noc-hub
+  - target:
       kind: Deployment
       name: mcp-openshift
     patch: |-
