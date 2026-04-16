@@ -90,16 +90,29 @@ langfuse = Langfuse(
 # ─────────────────────────────────────────────
 async def call_mcp_tool(server_url: str, tool_name: str, args: dict) -> dict:
     """Call a FastMCP tool via Streamable HTTP transport."""
-    async with streamablehttp_client(server_url) as (read, write, _):
-        async with ClientSession(read, write) as client:
-            await client.initialize()
-            result = await client.call_tool(tool_name, args or {})
-            if result.content and len(result.content) > 0:
-                first = result.content[0]
-                text = getattr(first, "text", "")
-                if text:
-                    return json.loads(text)
-    return {}
+    try:
+        async with streamablehttp_client(server_url) as (read, write, _):
+            async with ClientSession(read, write) as client:
+                await client.initialize()
+                result = await client.call_tool(tool_name, args or {})
+                if result.content and len(result.content) > 0:
+                    first = result.content[0]
+                    text = getattr(first, "text", "")
+                    if text:
+                        try:
+                            return json.loads(text)
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                "[MCP] Non-JSON response from %s tool=%s: %s",
+                                server_url,
+                                tool_name,
+                                text[:240],
+                            )
+                            return {"success": False, "message": text}
+        return {"success": False, "message": "empty MCP response"}
+    except Exception as exc:
+        logger.warning("[MCP] Tool call failed server=%s tool=%s error=%s", server_url, tool_name, exc)
+        return {"success": False, "message": str(exc)}
 
 
 def build_lightspeed_playbook(log: LogEvent, rca: RootCauseAnalysis, incident_id: str) -> tuple[str, str]:
