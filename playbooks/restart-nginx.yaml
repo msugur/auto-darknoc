@@ -85,11 +85,11 @@
         (deploy_after.json.status.observedGeneration | default(0) | int) >=
         (deploy_patch.json.metadata.generation | default(pre_generation) | int)
         and
-        (deploy_after.json.status.updatedReplicas | default(0) | int) >= desired_replicas
+        (deploy_after.json.status.updatedReplicas | default(0) | int) >= (desired_replicas | int)
         and
-        (deploy_after.json.status.readyReplicas | default(0) | int) >= desired_replicas
+        (deploy_after.json.status.readyReplicas | default(0) | int) >= (desired_replicas | int)
         and
-        (deploy_after.json.status.availableReplicas | default(0) | int) >= desired_replicas
+        (deploy_after.json.status.availableReplicas | default(0) | int) >= (desired_replicas | int)
 
     - name: Report remediation result
       ansible.builtin.debug:
