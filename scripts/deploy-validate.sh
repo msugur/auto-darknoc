@@ -62,7 +62,18 @@ validate_ai_core() {
   echo "== Validate AI Core =="
   login_hub
   oc -n redhat-ods-applications get pods >/dev/null
-  oc -n dark-noc-hub get inferenceservice >/dev/null
+  if oc -n dark-noc-hub get inferenceservice --ignore-not-found -o name | rg -q .; then
+    return
+  fi
+
+  # Fallback path: the deployment can use a pre-existing model endpoint via model-binding.
+  local model_api_url model_id
+  model_api_url="$(oc -n dark-noc-hub get configmap dark-noc-model-binding -o jsonpath='{.data.MODEL_API_URL}' 2>/dev/null || true)"
+  model_id="$(oc -n dark-noc-hub get configmap dark-noc-model-binding -o jsonpath='{.data.MODEL_ID}' 2>/dev/null || true)"
+  [[ -n "${model_api_url}" && -n "${model_id}" ]] || {
+    echo "Missing AI runtime target: no InferenceService and no dark-noc-model-binding MODEL_API_URL/MODEL_ID" >&2
+    exit 1
+  }
 }
 
 validate_automation() {
