@@ -25,12 +25,3 @@ data:
       - slack:#demos
       triggers:
       - on-sync-failed
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: argocd-notifications-secret
-  namespace: openshift-gitops
-type: Opaque
-stringData:
-  slack-token: REPLACE_WITH_XOXB_TOKEN

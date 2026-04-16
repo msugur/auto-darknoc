@@ -1,5 +1,5 @@
 version_pins:
-  openshift_container_platform: "4.21.3"
+  openshift_container_platform: "4.21.5"
   openshift_ai_operator: "3.3.0"
   openshift_ai_self_managed_docs: "2.23"
   amq_streams: "3.1.0"

@@ -4,8 +4,8 @@ This runbook tracks the deployment sequence validated against the live hub clust
 
 ## Scope
 
-- Hub: OCP 4.21.3
-- Edge: OCP 4.21.3
+- Hub: OCP 4.21.x
+- Edge: OCP 4.21.x
 - Environment: OpenTLC-style cluster with possible SNO pod-capacity constraints
 
 ## Critical Pre-Checks

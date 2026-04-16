@@ -19,3 +19,10 @@ spec:
       ports:
         - protocol: TCP
           port: 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dark-noc-observability
+      ports:
+        - protocol: TCP
+          port: 5432

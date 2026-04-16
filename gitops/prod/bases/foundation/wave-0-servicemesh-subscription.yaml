@@ -68,45 +68,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 ---
-# ServiceMeshControlPlane — activates Istio control plane
-# Apply AFTER both CSVs reach Succeeded state
-apiVersion: maistra.io/v2
-kind: ServiceMeshControlPlane
-metadata:
-  name: basic
-  namespace: istio-system
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-spec:
-  version: v2.6
-  tracing:
-    type: None         # Skip Jaeger for demo — reduces resource use
-  addons:
-    kiali:
-      enabled: true
-    prometheus:
-      enabled: false   # Use existing Prometheus from cluster monitoring
-  proxy:
-    resources:
-      requests:
-        cpu: 10m       # Minimal resources for demo
-        memory: 128Mi
-      limits:
-        cpu: 500m
-        memory: 128Mi
----
-# ServiceMeshMemberRoll — enrolls namespaces in the mesh
-# Add dark-noc namespaces that need mTLS
-apiVersion: maistra.io/v1
-kind: ServiceMeshMemberRoll
-metadata:
-  name: default
-  namespace: istio-system
-  labels:
-    app.kubernetes.io/part-of: dark-noc
-spec:
-  members:
-    - dark-noc-hub
-    - dark-noc-mcp
-    - dark-noc-kafka
-    - dark-noc-observability
+# NOTE:
+# Service Mesh 3 (Sail Operator) on OCP 4.21 does not expose legacy
+# maistra.io ServiceMeshControlPlane/ServiceMeshMemberRoll CRDs.
+# Keep this wave focused on operator installation and istio-system namespace.

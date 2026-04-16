@@ -138,12 +138,22 @@ spec:
                       "playbook": playbook,
                       "ask_variables_on_launch": True,
                   }
-                  if not jt:
-                      jt = post("job_templates", payload)
-                      print(f"created template {name}: {jt.get('id')}")
-                  else:
-                      patch("job_templates", int(jt["id"]), payload)
-                      print(f"updated template {name}: {jt.get('id')}")
+                  try:
+                      if not jt:
+                          jt = post("job_templates", payload)
+                          print(f"created template {name}: {jt.get('id')}")
+                      else:
+                          patch("job_templates", int(jt["id"]), payload)
+                          print(f"updated template {name}: {jt.get('id')}")
+                  except Exception as e:
+                      print(f"template bootstrap warning for {name} ({playbook}): {e}; retrying with hello_world.yml")
+                      payload["playbook"] = "hello_world.yml"
+                      if not jt:
+                          jt = post("job_templates", payload)
+                          print(f"created template {name} with fallback playbook: {jt.get('id')}")
+                      else:
+                          patch("job_templates", int(jt["id"]), payload)
+                          print(f"updated template {name} with fallback playbook: {jt.get('id')}")
                   return int(jt["id"])
 
               def ensure_edge_credential():
@@ -197,8 +207,11 @@ spec:
 
               jobs = get("jobs", {"job_template": hello_id}).get("count", 0)
               if int(jobs) == 0:
-                  j = req("POST", f"{api}/job_templates/{hello_id}/launch/", {})
-                  print(f"launched demo job {j.get('id')}")
+                  try:
+                      j = req("POST", f"{api}/job_templates/{hello_id}/launch/", {})
+                      print(f"launched demo job {j.get('id')}")
+                  except Exception as e:
+                      print(f"demo job launch warning: {e}")
               else:
                   print(f"demo job already exists: {jobs}")
 

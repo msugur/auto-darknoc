@@ -193,6 +193,55 @@ def rag_search(query: str, doc_type: str, top_k: int = 5) -> list[str]:
     return chunks
 
 
+def fallback_rca(log: LogEvent) -> RootCauseAnalysis:
+    """
+    Deterministic RCA used when model inference is unavailable.
+    Keeps demo automation functional without masking that fallback was used.
+    """
+    message = str(log.get("message", "")).lower()
+    scenario = str(log.get("raw", {}).get("labels", {}).get("dark_noc_scenario", "")).strip().lower()
+
+    if scenario == "lightspeed":
+        failure_type = "Ansible Automation Failure"
+        severity = "high"
+        escalate = False
+        confidence = 0.82
+        summary = "Detected Lightspeed workflow incident; proceeding with AAP-assisted remediation."
+        actions = ["Launch Lightspeed AAP template", "Track execution status", "Create governance ticket"]
+    elif "oomkilled" in message or scenario == "oom":
+        failure_type = "OOMKilled"
+        severity = "high"
+        escalate = False
+        confidence = 0.86
+        summary = "Container memory exhaustion detected on edge workload."
+        actions = ["Trigger restart-nginx via AAP", "Validate pod health", "Confirm memory limits"]
+    elif "crashloop" in message or scenario == "crashloop":
+        failure_type = "CrashLoopBackOff"
+        severity = "high"
+        escalate = False
+        confidence = 0.84
+        summary = "Repeated restart failure detected for target workload."
+        actions = ["Trigger rollout restart", "Inspect recent logs", "Validate configuration and probes"]
+    else:
+        failure_type = "Unknown"
+        severity = "critical"
+        escalate = True
+        confidence = 0.55
+        summary = "Unable to classify incident confidently without model inference; escalating for human review."
+        actions = ["Create ServiceNow incident", "Notify #demos", "Collect additional diagnostics"]
+
+    return {
+        "failure_type": failure_type,
+        "confidence": confidence,
+        "summary": summary,
+        "evidence": [str(log.get("message", ""))[:400]],
+        "recommended_actions": actions,
+        "escalate_to_human": escalate,
+        "estimated_severity": severity,
+        "runbook_reference": "deterministic-fallback",
+    }
+
+
 # ─────────────────────────────────────────────
 # GRAPH NODES
 # ─────────────────────────────────────────────
@@ -271,12 +320,19 @@ Provide structured root cause analysis as JSON."""
     trace = langfuse.trace(name="dark-noc-rca", input={"log": log["message"]})
 
     messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
-    response = llm.invoke(messages, response_format=response_format)
+    used_fallback = False
+    response = None
+    try:
+        response = llm.invoke(messages, response_format=response_format)
+        rca: RootCauseAnalysis = json.loads(response.content)
+    except Exception as e:
+        used_fallback = True
+        logger.warning(f"[ANALYZE] LLM unavailable; using deterministic fallback RCA: {e}")
+        rca = fallback_rca(log)
 
     latency_ms = (time.monotonic() - start) * 1000
-    rca: RootCauseAnalysis = json.loads(response.content)
 
-    trace.update(output=rca, metadata={"latency_ms": latency_ms})
+    trace.update(output=rca, metadata={"latency_ms": latency_ms, "used_fallback": used_fallback})
     logger.info(f"[ANALYZE] failure_type={rca['failure_type']} confidence={rca['confidence']:.2f} severity={rca['estimated_severity']}")
 
     scenario = str(log.get("raw", {}).get("labels", {}).get("dark_noc_scenario", "")).strip().lower()
@@ -287,7 +343,7 @@ Provide structured root cause analysis as JSON."""
 
     return {
         "rca": rca,
-        "analysis_tokens_used": response.usage_metadata.get("total_tokens", 0) if hasattr(response, "usage_metadata") else 0,
+        "analysis_tokens_used": response.usage_metadata.get("total_tokens", 0) if response and hasattr(response, "usage_metadata") else 0,
         "analysis_latency_ms": latency_ms,
         "next_action": next_action,
         "langfuse_trace_id": trace.id,
