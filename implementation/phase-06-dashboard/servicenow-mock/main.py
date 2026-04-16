@@ -1,5 +1,5 @@
 """
-Dark NOC — ServiceNow Mock API
+Telco Autonomous Agentic AI Remediation — ServiceNow Mock API
 ================================
 FastAPI service simulating ServiceNow REST Table API.
 Replaces real ServiceNow for demo purposes.
@@ -29,7 +29,7 @@ from pydantic import BaseModel
 
 app = FastAPI(
     title="ServiceNow Mock API",
-    description="Mock ServiceNow REST Table API for Dark NOC demo",
+    description="Mock ServiceNow REST Table API for Telco Autonomous Agentic AI Remediation demo",
     version="1.0.0",
 )
 

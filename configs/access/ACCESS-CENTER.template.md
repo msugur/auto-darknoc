@@ -1,4 +1,4 @@
-# Dark NOC Access Center (Template)
+# Telco Autonomous Agentic AI Remediation Access Center (Template)
 
 Do not commit real credentials. Keep filled copy local as `configs/access/ACCESS-CENTER.local.md`.
 

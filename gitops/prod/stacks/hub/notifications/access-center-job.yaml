@@ -53,7 +53,7 @@ data:
       return f"- {k}: {mask(v) if secret else (v or '<not-set>')}"
 
     text = "\n".join([
-      "Dark NOC Access Center (masked)",
+      "Telco Autonomous Agentic AI Remediation Access Center (masked)",
       line("Hub Console", os.getenv("HUB_CONSOLE_URL")),
       line("Hub API", os.getenv("HUB_API_URL")),
       line("Edge Console", os.getenv("EDGE_CONSOLE_URL")),
@@ -93,7 +93,7 @@ data:
     if smtp_host and smtp_user and smtp_pass:
       try:
         msg = MIMEText(text)
-        msg["Subject"] = "Dark NOC Access Center (masked)"
+        msg["Subject"] = "Telco Autonomous Agentic AI Remediation Access Center (masked)"
         msg["From"] = smtp_user
         msg["To"] = recipient
         with smtplib.SMTP(smtp_host, int(os.getenv("SMTP_PORT", "587"))) as s:

@@ -13,7 +13,7 @@ data:
       when: app.status.operationState.phase in ['Error', 'Failed']
   template.slack-failure: |
     message: |
-      Dark NOC deploy failure
+      Telco Autonomous Agentic AI Remediation deploy failure
       app={{.app.metadata.name}}
       phase={{.app.status.operationState.phase}}
       sync={{.app.status.sync.status}}

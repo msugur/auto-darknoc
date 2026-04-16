@@ -1,4 +1,4 @@
-# Dark NOC Redeploy Runbook (Validated Path)
+# Telco Autonomous Agentic AI Remediation Redeploy Runbook (Validated Path)
 
 This runbook tracks the deployment sequence validated against the live hub cluster and captures required fixes for reproducible redeploys.
 

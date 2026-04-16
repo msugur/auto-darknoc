@@ -4,7 +4,7 @@ metadata:
   name: auto-darknoc-prod
   namespace: openshift-gitops
 spec:
-  description: Auto Dark NOC production project
+  description: Telco Autonomous Agentic AI Remediation production project
   sourceRepos:
     - 'https://github.com/msugur/auto-darknoc.git'
     - 'https://langfuse.github.io/langfuse-k8s'
