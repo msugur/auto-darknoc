@@ -33,11 +33,13 @@ spec:
                 secretKeyRef:
                   name: aap-edge-credentials
                   key: EDGE_API_URL
+                  optional: true
             - name: EDGE_API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: aap-edge-credentials
                   key: EDGE_API_TOKEN
+                  optional: true
           command:
             - python
             - -c
