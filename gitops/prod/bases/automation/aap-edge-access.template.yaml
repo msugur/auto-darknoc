@@ -5,5 +5,5 @@ metadata:
   namespace: aap
 type: Opaque
 stringData:
-  EDGE_API_URL: "https://api.REPLACE_ME_EDGE_CLUSTER:6443"
+  EDGE_API_URL: "REPLACE_WITH_EDGE_API_URL"
   EDGE_API_TOKEN: "REPLACE_WITH_EDGE_CLUSTER_TOKEN"

@@ -91,3 +91,4 @@ models/
 !gitops/prod/secrets/
 gitops/prod/secrets/*.real.yaml
 !gitops/prod/secrets/*.template.yaml
+gitops/prod/bases/automation/*.real.yaml

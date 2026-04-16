@@ -28,6 +28,15 @@
 
 set -euo pipefail
 
+if ! command -v oc >/dev/null 2>&1; then
+    if [[ -x /usr/local/bin/oc ]]; then
+        oc() { /usr/local/bin/oc "$@"; }
+    else
+        echo "oc CLI not found in PATH"
+        exit 1
+    fi
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -43,6 +52,29 @@ fail() { echo -e "  ${RED}❌ FAIL${NC} — $1"; FAIL=$((FAIL + 1)); }
 warn() { echo -e "  ${YELLOW}⚠️  WARN${NC} — $1"; WARN=$((WARN + 1)); }
 info() { echo -e "  ${BLUE}ℹ️  INFO${NC} — $1"; }
 header() { echo -e "\n${BLUE}━━━ $1 ━━━${NC}"; }
+
+HUB_USERNAME="${HUB_USERNAME:-${HUB_CLUSTER_ADMIN_USERNAME:-admin}}"
+HUB_PASSWORD="${HUB_PASSWORD:-${HUB_CLUSTER_ADMIN_PASSWORD:-${HUB_CONSOLE_PASSWORD:-}}}"
+EDGE_USERNAME="${EDGE_USERNAME:-${EDGE_CLUSTER_ADMIN_USERNAME:-admin}}"
+EDGE_PASSWORD="${EDGE_PASSWORD:-${EDGE_CLUSTER_ADMIN_PASSWORD:-${EDGE_CONSOLE_PASSWORD:-}}}"
+
+login_hub() {
+    if [[ -n "${HUB_TOKEN:-}" ]]; then
+        oc login "${HUB_API_URL}" --token="${HUB_TOKEN}" --insecure-skip-tls-verify=true &>/dev/null
+    else
+        [[ -n "${HUB_PASSWORD:-}" ]] || return 1
+        oc login "${HUB_API_URL}" -u "${HUB_USERNAME}" -p "${HUB_PASSWORD}" --insecure-skip-tls-verify=true &>/dev/null
+    fi
+}
+
+login_edge() {
+    if [[ -n "${EDGE_TOKEN:-}" ]]; then
+        oc login "${EDGE_API_URL}" --token="${EDGE_TOKEN}" --insecure-skip-tls-verify=true &>/dev/null
+    else
+        [[ -n "${EDGE_PASSWORD:-}" ]] || return 1
+        oc login "${EDGE_API_URL}" -u "${EDGE_USERNAME}" -p "${EDGE_PASSWORD}" --insecure-skip-tls-verify=true &>/dev/null
+    fi
+}
 
 # Extract client/server versions without relying on deprecated --short output.
 client_version() {
@@ -83,7 +115,7 @@ header "CHECK 2: Hub Cluster Access"
 if [[ -z "${HUB_API_URL:-}" ]]; then
     fail "HUB_API_URL not set. Run: source configs/hub/env.sh"
 else
-    if oc login "${HUB_API_URL}" --token="${HUB_TOKEN}" --insecure-skip-tls-verify=true &>/dev/null; then
+    if login_hub; then
         HUB_VERSION="$(server_version || true)"
         if [[ "${HUB_VERSION}" == 4.21* ]]; then
             pass "Hub cluster accessible — OCP version: ${HUB_VERSION}"
@@ -157,13 +189,13 @@ fi
 # CHECK 6: Conflicting operators
 # ============================================================
 header "CHECK 6: Existing Operators (conflict check)"
-CONFLICT_OPERATORS="rhods-operator|advanced-cluster-management|amq-streams|ansible-automation-platform"
-EXISTING=$(oc get csv -A --no-headers 2>/dev/null | grep -E "${CONFLICT_OPERATORS}" || true)
+CONFLICT_OPERATORS="rhods|advanced-cluster-management|amq-streams|ansible-automation-platform|aap|loki|multicluster"
+EXISTING=$(oc get subscriptions.operators.coreos.com -A --no-headers 2>/dev/null | grep -Ei "${CONFLICT_OPERATORS}" || true)
 
 if [[ -z "${EXISTING}" ]]; then
     pass "No conflicting operators pre-installed — clean slate"
 else
-    warn "Found existing operators — verify versions are correct:"
+    warn "Found existing operator subscriptions — verify versions/channels are correct:"
     echo "${EXISTING}" | while read line; do
         echo "    ${line}"
     done
@@ -194,7 +226,7 @@ if [[ -z "${EDGE_API_URL:-}" ]]; then
     warn "EDGE_API_URL not set — skipping edge cluster checks"
     warn "Set edge credentials in configs/edge/env.sh and re-run"
 else
-    if oc login "${EDGE_API_URL}" --token="${EDGE_TOKEN}" --insecure-skip-tls-verify=true &>/dev/null; then
+    if login_edge; then
         EDGE_VERSION="$(server_version || true)"
         if [[ "${EDGE_VERSION}" == 4.21* ]]; then
             pass "Edge cluster accessible — OCP version: ${EDGE_VERSION}"
@@ -208,7 +240,7 @@ fi
 
 # Switch back to hub context
 if [[ -n "${HUB_API_URL:-}" ]]; then
-    oc login "${HUB_API_URL}" --token="${HUB_TOKEN}" --insecure-skip-tls-verify=true &>/dev/null || true
+    login_hub || true
 fi
 
 # ============================================================

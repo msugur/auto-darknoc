@@ -6,7 +6,7 @@ Last updated: 2026-03-11 15:54 EDT
 
 | Product | Version | Where Used |
 |---|---:|---|
-| OpenShift Container Platform | 4.21.3 | Hub and Edge cluster base |
+| OpenShift Container Platform | 4.21.x | Hub and Edge cluster base |
 | Red Hat OpenShift AI Operator | 3.3.0 | Hub AI core (`DataScienceCluster`, model serving) |
 | Red Hat Advanced Cluster Management (ACM) | 2.15.1 | Hub/Edge multicluster lifecycle and policy |
 | Red Hat Ansible Automation Platform (AAP) | 2.5.x | Hub controller, EDA, automation workflows |

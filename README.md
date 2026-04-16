@@ -76,55 +76,44 @@ The **Autonomous Dark NOC** is a fully AI-driven network operations solution for
 
 ## Prerequisites
 
-### Required Access
-- [ ] Hub cluster: `oc login <hub-api> --token=<token>`
-- [ ] Edge cluster: `oc login <edge-api> --token=<token>`
-- [ ] Slack bot token (`xoxb-...`)
-- [ ] AWS access for MachineSet management (g5.2xlarge)
+### Minimal Inputs
+- Hub API URL + credentials (`token` or `username/password`)
+- Edge API URL + credentials (`token` or `username/password`)
 
-### Required Subscriptions (already on clusters)
-- [ ] Red Hat OpenShift 4.21
-- [ ] Red Hat OpenShift AI 3.3
-- [ ] Red Hat ACM 2.15
-- [ ] Red Hat Streams for Apache Kafka 3.1
-- [ ] Red Hat Ansible Automation Platform 2.5
+Everything else is auto-generated/defaulted during deploy.
 
-### Tools Required (on your workstation)
+### Tool Required
 ```bash
-oc          # OpenShift CLI
-helm        # Helm 3.x
-git         # Git
-python3     # Python 3.11+
-kubectl     # Optional (oc covers all kubectl functions)
+oc
 ```
 
 ---
 
-## Quick Start
+## Quick Start (Single Click)
 
 ```bash
-# 1. Clone this repository
 git clone https://github.com/<your-org>/dark-noc.git
 cd dark-noc
 
-# 2. Set up environment variables for both clusters
 cp configs/hub/env.sh.example configs/hub/env.sh
-cp configs/edge/env.sh.example configs/edge/env.sh
-# Edit both files with your cluster details
+# optional: cp configs/edge/env.sh.example configs/edge/env.sh
+# fill hub+edge API/auth values
 
-# 3. Source hub environment
 source configs/hub/env.sh
+# optional: source configs/edge/env.sh
 
-# 4. Run pre-flight checks
-./scripts/preflight.sh
-
-# 5. Follow the implementation phases in order
-# Start with: implementation/phase-01-foundation/
+./scripts/one-click-gitops.sh --create-quay-pull
+# for first-time cluster/domain values with Argo source in GitHub main:
+# ./scripts/one-click-gitops.sh --commit-runtime-config --create-quay-pull
+oc -n openshift-gitops get applications.argoproj.io
 ```
 
-## Deployment Order (Authoritative)
+Authoritative one-click guide:
+- [`gitops/prod/docs/ONE_CLICK_DEPLOY.md`](gitops/prod/docs/ONE_CLICK_DEPLOY.md)
 
-Use this order for a clean redeploy:
+## Deployment Order (Advanced/Manual)
+
+Use this only if you are debugging or doing staged/manual deploy:
 
 1. Phase 01 Foundation
 2. Phase 02 Data Pipeline
@@ -188,7 +177,8 @@ dark-noc/
 │
 ├── scripts/                           # Utility scripts
 │   ├── preflight.sh                   # Pre-flight cluster checks
-│   ├── setup-env.sh                   # Environment setup helper
+│   ├── one-click-gitops.sh            # End-to-end GitOps bootstrap
+│   ├── render-prod-secrets.sh         # Render runtime .real.yaml from templates
 │   └── teardown.sh                    # Full cleanup / uninstall
 │
 ├── logs/                              # Execution logs

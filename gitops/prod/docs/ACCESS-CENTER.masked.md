@@ -6,11 +6,11 @@ Generated: 2026-03-16 (America/New_York)
 
 - Hub Console: `https://console-openshift-console.apps.ocp.ms2b2.sandbox2859.opentlc.com`
 - Hub API: `https://api.ocp.ms2b2.sandbox2859.opentlc.com:6443`
-- Hub OCP Version: `4.21.3`
+- Hub OCP Version: `4.21.x`
 - Hub Login: `admin / gBdY*********nocf`
 - Edge Console: `https://console-openshift-console.apps.ocp.79zl4.sandbox951.opentlc.com`
 - Edge API: `https://api.ocp.79zl4.sandbox951.opentlc.com:6443`
-- Edge OCP Version: `4.21.3`
+- Edge OCP Version: `4.21.x`
 - Edge Login: `admin / VW9U********auFc`
 
 ## GitOps

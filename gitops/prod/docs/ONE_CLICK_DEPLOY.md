@@ -7,8 +7,8 @@ This deploy path is designed to need only:
 All other values are auto-generated/defaulted during deploy, including:
 - runtime `.real.yaml` secret files
 - service URLs (from OpenShift Routes when available)
-- tool credentials (`admin/redhat` defaults for deployed tools)
-- Slack/ServiceNow defaults already configured in render script
+- optional tool credentials (defaults can be overridden via env values)
+- Slack/ServiceNow values from env inputs or safe placeholders
 
 ## 1) Prepare env files
 
@@ -36,6 +36,12 @@ If edge destination name is different from `edge-cluster`:
 
 ```bash
 ./scripts/one-click-gitops.sh --edge-destination <your-edge-destination-name> --create-quay-pull
+```
+
+If this is a brand-new cluster/domain and your Argo root app tracks GitHub `main`, persist non-secret route updates before sync:
+
+```bash
+./scripts/one-click-gitops.sh --commit-runtime-config --create-quay-pull
 ```
 
 ## 3) Verify

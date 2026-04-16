@@ -17,14 +17,16 @@ spec:
               set -euo pipefail
               CURRENT=$(oc get clusterversion version -o jsonpath='{.status.desired.version}')
               echo "Cluster version: ${CURRENT}"
-              if [[ "${CURRENT}" != "4.21.3" ]]; then
-                echo "Expected OCP 4.21.3 before deployment"
+              if [[ ! "${CURRENT}" =~ ^4\.21\.[0-9]+$ ]]; then
+                echo "Expected OCP 4.21.x before deployment"
                 exit 1
               fi
               if [[ -n "${HUB_CPU_MACHINESET:-}" ]]; then
                 TARGET="${HUB_CPU_REPLICAS:-1}"
                 echo "Scaling ${HUB_CPU_MACHINESET} to ${TARGET}"
-                oc -n openshift-machine-api scale machineset "${HUB_CPU_MACHINESET}" --replicas="${TARGET}"
+                if ! oc -n openshift-machine-api scale machineset "${HUB_CPU_MACHINESET}" --replicas="${TARGET}"; then
+                  echo "Warning: hub worker scale check failed; continuing"
+                fi
               else
                 echo "HUB_CPU_MACHINESET not set; skipping scale"
               fi

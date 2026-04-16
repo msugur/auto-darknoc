@@ -18,6 +18,9 @@ rules:
   - apiGroups: ["machine.openshift.io"]
     resources: ["machinesets"]
     verbs: ["get", "list", "patch", "update"]
+  - apiGroups: ["cluster.x-k8s.io"]
+    resources: ["machinesets"]
+    verbs: ["get", "list", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

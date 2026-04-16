@@ -22,16 +22,6 @@ roleRef:
   kind: ClusterRole
   name: cluster-monitoring-view
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-admin
-  namespace: dark-noc-grafana
-type: Opaque
-stringData:
-  admin-user: REPLACE_WITH_GRAFANA_ADMIN_USER
-  admin-password: REPLACE_WITH_GRAFANA_ADMIN_PASSWORD
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

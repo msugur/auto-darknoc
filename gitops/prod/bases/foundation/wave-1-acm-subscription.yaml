@@ -41,7 +41,9 @@ kind: OperatorGroup
 metadata:
   name: acm-operator-group
   namespace: open-cluster-management
-spec: {}   # AllNamespaces — ACM manages cluster-scoped resources
+spec:
+  targetNamespaces:
+    - open-cluster-management
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
