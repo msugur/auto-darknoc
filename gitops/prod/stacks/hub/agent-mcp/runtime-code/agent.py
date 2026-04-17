@@ -351,6 +351,11 @@ Provide structured root cause analysis as JSON."""
     scenario = str(log.get("raw", {}).get("labels", {}).get("dark_noc_scenario", "")).strip().lower()
     if scenario == "lightspeed":
         next_action = "lightspeed"
+    elif scenario in {"oom", "crashloop"}:
+        # Keep demo triggers deterministic: these scenarios should exercise fast-path remediation.
+        next_action = "remediate"
+    elif scenario == "escalation":
+        next_action = "escalate"
     else:
         next_action = "escalate" if rca["escalate_to_human"] else "remediate"
 

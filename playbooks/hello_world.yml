@@ -1,0 +1,8 @@
+---
+- name: Demo hello-world playbook for AAP bootstrap validation
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Print hello from AAP
+      ansible.builtin.debug:
+        msg: "Hello from Telco Autonomous Agentic AI Remediation demo template"

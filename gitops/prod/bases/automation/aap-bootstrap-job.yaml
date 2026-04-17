@@ -207,7 +207,14 @@ spec:
               edge_cred_id = ensure_edge_credential()
               hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
               restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml", None)
-              lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
+              # Keep lightspeed template executable by default using a real remediation playbook.
+              lightspeed_id = ensure_template(
+                  "lightspeed-generate-and-run",
+                  project_id,
+                  inventory_id,
+                  "playbooks/restart-nginx.yaml",
+                  "hello_world.yml",
+              )
               associate_credential(restart_id, edge_cred_id)
               associate_credential(lightspeed_id, edge_cred_id)
 
