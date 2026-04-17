@@ -1,8 +1,8 @@
-# Dark NOC — Architecture Overview
+# Telco Autonomous Agentic AI Remediation — Architecture Overview
 
 ## Solution Summary
 
-Dark NOC is an **Autonomous Network Operations Center** built on Red Hat OpenShift AI. It monitors edge web servers, detects failures via AI analysis, and remediates them automatically — all without human intervention for 94%+ of incidents.
+Telco Autonomous Agentic AI Remediation is an **Autonomous Network Operations Center** built on Red Hat OpenShift AI. It monitors edge web servers, detects failures via AI analysis, and remediates them automatically — all without human intervention for 94%+ of incidents.
 
 ---
 

@@ -1,4 +1,4 @@
-# Dark NOC — ServiceNow Mock API Dockerfile
+# Telco Autonomous Agentic AI Remediation — ServiceNow Mock API Dockerfile
 FROM python:3.12-slim
 
 WORKDIR /app

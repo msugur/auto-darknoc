@@ -1,4 +1,4 @@
-# 🔴 Autonomous Dark NOC — Telco Edge AI Solution
+# 🔴 Telco Autonomous Agentic AI Remediation — Telco Edge AI Solution
 
 > AI-Driven Self-Healing Telco Edge Operations powered by Red Hat OpenShift AI
 
@@ -30,7 +30,7 @@
 
 ## Overview
 
-The **Autonomous Dark NOC** is a fully AI-driven network operations solution for Telco edge environments. It autonomously detects failures at distributed edge sites, performs deep log analysis using IBM Granite 4.0 AI models, generates and executes Ansible remediation playbooks — all without human intervention. When AI cannot resolve an issue, it automatically creates ServiceNow tickets and notifies teams via Slack.
+The **Telco Autonomous Agentic AI Remediation** is a fully AI-driven network operations solution for Telco edge environments. It autonomously detects failures at distributed edge sites, performs deep log analysis using IBM Granite 4.0 AI models, generates and executes Ansible remediation playbooks — all without human intervention. When AI cannot resolve an issue, it automatically creates ServiceNow tickets and notifies teams via Slack.
 
 ### Key Capabilities
 | Capability | Technology | Result |
@@ -264,4 +264,4 @@ This project is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) fo
 
 ---
 
-*Red Hat Dark NOC Workshop · Telco Edge AI · February 2026*
+*Red Hat Telco Autonomous Agentic AI Remediation Workshop · Telco Edge AI · February 2026*

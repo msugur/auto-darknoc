@@ -1,4 +1,4 @@
-# Dark NOC Product & Tool Version Matrix
+# Telco Autonomous Agentic AI Remediation Product & Tool Version Matrix
 
 Last updated: 2026-03-11 15:54 EDT
 

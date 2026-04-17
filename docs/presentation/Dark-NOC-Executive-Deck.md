@@ -1,4 +1,4 @@
-# Dark NOC for Telco
+# Telco Autonomous Agentic AI Remediation for Telco
 ## Autonomous Operations on Red Hat OpenShift AI
 
 **Audience:** C-Suite, Operations, Network Engineering, Security, ITSM  
@@ -9,7 +9,7 @@
 
 ## Slide 1: Executive Summary
 - Telco operations are still dominated by reactive incident response, high MTTR, and tool fragmentation.
-- Dark NOC introduces an AI-driven, policy-guarded, closed-loop operations model for edge and core workloads.
+- Telco Autonomous Agentic AI Remediation introduces an AI-driven, policy-guarded, closed-loop operations model for edge and core workloads.
 - Built on Red Hat OpenShift + OpenShift AI + Ansible Automation Platform for enterprise-grade control.
 - Outcome target: faster restoration, lower operational cost, better SLA adherence, improved customer experience.
 
@@ -74,7 +74,7 @@
 
 ---
 
-## Slide 9: Dark NOC Architecture (Hub + Edge)
+## Slide 9: Telco Autonomous Agentic AI Remediation Architecture (Hub + Edge)
 - **Edge-01:** monitored workload + local EDA runner for fast-path remediation.
 - **Hub:** AI intelligence control plane, event pipeline, observability, automation integration.
 - **Data + MCP Agents:** OpenShift, AAP, Kafka, Loki, ServiceNow, Slack integration layer.
@@ -189,7 +189,7 @@
 ---
 
 ## Slide 22: Decision Needed
-- Approve pilot-to-production plan for Dark NOC rollout.
+- Approve pilot-to-production plan for Telco Autonomous Agentic AI Remediation rollout.
 - Sponsor KPI baseline and value tracking over 8-12 weeks.
 - Align network ops, platform ops, and security leadership on governance controls.
 - Fund scale-out phase for additional edge regions/sites.
@@ -243,6 +243,6 @@
 ---
 
 ## Slide 28: Closing Message
-- Dark NOC transforms telco operations from reactive support to autonomous service assurance.
+- Telco Autonomous Agentic AI Remediation transforms telco operations from reactive support to autonomous service assurance.
 - Red Hat OpenShift AI + AAP provides the enterprise-grade, governed AI platform required for that shift.
 - The solution is not just a technical upgrade; it is an operations and business performance multiplier.

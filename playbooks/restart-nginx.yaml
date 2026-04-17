@@ -1,122 +1,100 @@
 ---
-# =============================================================
-# Ansible Playbook: Restart nginx on Edge Cluster
-# =============================================================
-# PURPOSE:
-#   Safely restarts the nginx deployment on the edge cluster.
-#   Used for: OOMKilled, unhealthy pod, hung process.
-#   Uses kubectl_apply via the k8s Ansible collection.
-#
-# TRIGGER SOURCES:
-#   1. EDA Controller (Kafka nginx-logs topic match)
-#   2. LangGraph agent via AAP MCP server REST API call
-#   3. Manual via AAP UI → Job Templates → restart-nginx
-#
-# VARIABLES (passed from EDA or agent):
-#   namespace:   Target namespace (default: dark-noc-edge)
-#   deployment:  Deployment name (default: nginx)
-#   edge_cluster: Site ID for reporting (default: edge-01)
-#
-# REQUIREMENTS:
-#   - Ansible collection: kubernetes.core
-#   - AAP credential: edge-01-k8s (OpenShift/Kubernetes bearer token)
-#     or edge-01-kubeconfig (legacy)
-# =============================================================
-- name: Restart nginx on Edge Cluster
+- name: Restart nginx deployment on edge via Kubernetes API
   hosts: localhost
   connection: local
   gather_facts: false
 
   vars:
-    namespace: "dark-noc-edge"
-    deployment: "nginx"
-    edge_cluster: "edge-01"
-    kubeconfig: "{{ lookup('env', 'KUBECONFIG') | default('', true) }}"
-    k8s_auth_host: "{{ lookup('env', 'K8S_AUTH_HOST') | default('', true) }}"
-    k8s_auth_api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default('', true) }}"
-    k8s_validate_certs: "{{ (lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('false', true)) | bool }}"
+    namespace: "{{ namespace | default(edge_namespace | default('dark-noc-edge')) }}"
+    deployment: "{{ deployment | default('nginx') }}"
+    edge_cluster: "{{ edge_cluster | default('edge-01') }}"
+    edge_api_url_from_env: "{{ lookup('env', 'K8S_AUTH_HOST') | default('', true) }}"
+    edge_token_from_env: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default('', true) }}"
+    edge_verify_ssl_from_env: "{{ lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('false', true) }}"
 
   tasks:
-    - name: Validate Kubernetes auth inputs
-      assert:
+    - name: Resolve effective edge API auth values
+      ansible.builtin.set_fact:
+        edge_api_url_effective: "{{ edge_api_url | default(edge_api_url_from_env, true) }}"
+        edge_token_effective: "{{ edge_token | default(edge_token_from_env, true) }}"
+        edge_verify_ssl_effective: "{{ edge_verify_ssl | default(edge_verify_ssl_from_env, true) }}"
+        edge_verify_ssl_bool: "{{ (edge_verify_ssl | default(edge_verify_ssl_from_env, true) | string | lower) in ['1', 'true', 'yes', 'on'] }}"
+
+    - name: Ensure edge API auth is available
+      ansible.builtin.assert:
         that:
-          - kubeconfig | length > 0 or (k8s_auth_host | length > 0 and k8s_auth_api_key | length > 0)
-        fail_msg: >
-          Missing Kubernetes auth. Provide either KUBECONFIG (legacy credential)
-          or K8S_AUTH_HOST + K8S_AUTH_API_KEY (AAP Kubernetes bearer token credential).
+          - edge_api_url_effective | length > 0
+          - edge_token_effective | length > 20
+        fail_msg: >-
+          Missing edge API credentials. Attach Kubernetes bearer-token credential
+          (edge-01-k8s) or pass edge_api_url and edge_token at launch.
 
-    - name: "{{ edge_cluster }}: Check nginx deployment state before restart"
-      kubernetes.core.k8s_info:
-        kind: Deployment
-        name: "{{ deployment }}"
-        namespace: "{{ namespace }}"
-        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
-        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
-        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
-        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
-      register: nginx_before
-      failed_when: nginx_before.resources | length == 0
+    - name: Normalize edge API URL
+      ansible.builtin.set_fact:
+        edge_api_base: "{{ edge_api_url_effective.rstrip('/') }}"
+        restart_ts: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
 
-    - name: "Log pre-restart status"
-      debug:
-        msg: >
-          Deployment {{ deployment }} in {{ namespace }}:
-          desired={{ nginx_before.resources[0].spec.replicas }},
-          ready={{ nginx_before.resources[0].status.readyReplicas | default(0) }}
+    - name: Read deployment before restart
+      ansible.builtin.uri:
+        url: "{{ edge_api_base }}/apis/apps/v1/namespaces/{{ namespace }}/deployments/{{ deployment }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ edge_token_effective }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
+        return_content: true
+        status_code: 200
+      register: deploy_before
 
-    - name: "{{ edge_cluster }}: Restart nginx via rollout"
-      kubernetes.core.k8s:
-        state: patched
-        kind: Deployment
-        name: "{{ deployment }}"
-        namespace: "{{ namespace }}"
-        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
-        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
-        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
-        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
-        definition:
+    - name: Capture desired replica target
+      ansible.builtin.set_fact:
+        desired_replicas: "{{ deploy_before.json.spec.replicas | default(1) | int }}"
+        pre_generation: "{{ deploy_before.json.metadata.generation | default(0) | int }}"
+
+    - name: Patch deployment with restart annotation
+      ansible.builtin.uri:
+        url: "{{ edge_api_base }}/apis/apps/v1/namespaces/{{ namespace }}/deployments/{{ deployment }}"
+        method: PATCH
+        headers:
+          Authorization: "Bearer {{ edge_token_effective }}"
+          Content-Type: "application/strategic-merge-patch+json"
+        body_format: json
+        body:
           spec:
             template:
               metadata:
                 annotations:
-                  kubectl.kubernetes.io/restartedAt: "{{ lookup('pipe', 'date -u +%FT%TZ') }}"
+                  kubectl.kubernetes.io/restartedAt: "{{ restart_ts }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
+        return_content: true
+        status_code: 200
+      register: deploy_patch
 
-    - name: "{{ edge_cluster }}: Wait for nginx rollout to complete"
-      kubernetes.core.k8s_info:
-        kind: Deployment
-        name: "{{ deployment }}"
-        namespace: "{{ namespace }}"
-        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
-        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
-        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
-        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
-      register: nginx_after
-      retries: 24
-      delay: 5
-      until: >
-        (nginx_after.resources | length > 0) and
-        ((nginx_after.resources[0].status.readyReplicas | default(0) | int) >=
-         (nginx_after.resources[0].spec.replicas | default(1) | int))
+    - name: Wait for rollout to complete
+      ansible.builtin.uri:
+        url: "{{ edge_api_base }}/apis/apps/v1/namespaces/{{ namespace }}/deployments/{{ deployment }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ edge_token_effective }}"
+        validate_certs: "{{ edge_verify_ssl_bool }}"
+        return_content: true
+        status_code: 200
+      register: deploy_after
+      retries: 30
+      delay: 4
+      until: >-
+        (deploy_after.json.status.observedGeneration | default(0) | int) >=
+        (deploy_patch.json.metadata.generation | default(pre_generation) | int)
+        and
+        (deploy_after.json.status.updatedReplicas | default(0) | int) >= (desired_replicas | int)
+        and
+        (deploy_after.json.status.readyReplicas | default(0) | int) >= (desired_replicas | int)
+        and
+        (deploy_after.json.status.availableReplicas | default(0) | int) >= (desired_replicas | int)
 
-    - name: "{{ edge_cluster }}: Verify nginx pod is Running"
-      kubernetes.core.k8s_info:
-        kind: Pod
-        namespace: "{{ namespace }}"
-        kubeconfig: "{{ kubeconfig if (kubeconfig | length > 0) else omit }}"
-        host: "{{ k8s_auth_host if (kubeconfig | length == 0) else omit }}"
-        api_key: "{{ k8s_auth_api_key if (kubeconfig | length == 0) else omit }}"
-        validate_certs: "{{ k8s_validate_certs if (kubeconfig | length == 0) else omit }}"
-        label_selectors:
-          - app=nginx
-      register: nginx_pods
-      retries: 12
-      delay: 10
-      until: >
-        nginx_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
-
-    - name: "Report remediation success"
-      debug:
-        msg: >
-          ✅ nginx restart complete on {{ edge_cluster }}.
-          Pod status: {{ nginx_pods.resources[0].status.phase }}
-          Timestamp: {{ lookup('pipe', 'date -u +%FT%TZ') }}
+    - name: Report remediation result
+      ansible.builtin.debug:
+        msg: >-
+          Restarted {{ namespace }}/{{ deployment }} on {{ edge_cluster }}.
+          restart_ts={{ restart_ts }}
+          generation={{ deploy_after.json.metadata.generation | default('n/a') }}
+          ready={{ deploy_after.json.status.readyReplicas | default(0) }}/{{ desired_replicas }}

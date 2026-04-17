@@ -1,4 +1,4 @@
-# Autonomous Dark NOC Quickstart Proposal
+# Telco Autonomous Agentic AI Remediation Quickstart Proposal
 
 ## Document metadata
 - Proposal target: New Red Hat-style quickstart experience for autonomous edge operations
@@ -8,7 +8,7 @@
 - Date: 2026-04-03
 
 ## Executive summary
-Autonomous Dark NOC is a production-oriented, AI-assisted edge operations solution that combines OpenShift, OpenShift AI, AAP/EDA, ACM, Kafka, Loki, Langfuse, and a LangGraph+MCP agent mesh. The solution already includes most of the technical assets required for a compelling quickstart, including phased manifests, GitOps composition, validation scripts, and executive dashboards.
+Telco Autonomous Agentic AI Remediation is a production-oriented, AI-assisted edge operations solution that combines OpenShift, OpenShift AI, AAP/EDA, ACM, Kafka, Loki, Langfuse, and a LangGraph+MCP agent mesh. The solution already includes most of the technical assets required for a compelling quickstart, including phased manifests, GitOps composition, validation scripts, and executive dashboards.
 
 The highest-value quickstart is a guided "incident-to-remediation" experience that deploys hub + edge components, triggers a controlled edge failure, and demonstrates closed-loop auto-remediation plus escalation with full evidence. The quickstart should prioritize deterministic setup, explicit validation gates, secure runtime secret handling, and clear business outcome telemetry (MTTD, MTTR, auto-remediation %, escalation %).
 

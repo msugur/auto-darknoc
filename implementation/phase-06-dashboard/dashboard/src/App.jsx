@@ -220,7 +220,7 @@ export default function App() {
     <main className="page">
       <section className="hero">
         <p className="badge">AUTONOMOUS NOC · ENTERPRISE OPS</p>
-        <h1>Dark NOC Operations Command Center</h1>
+        <h1>Telco Autonomous Agentic AI Remediation Operations Command Center</h1>
         <p className="sub">
           Unified operational surface for `edge-01`: AI agent runtime, MCP mesh,
           platform dependencies, and incident/error flow topology.
@@ -478,7 +478,7 @@ export default function App() {
         <p className="topology-sub">
           Executive architecture view: edge operations, hub AI control plane, and enterprise integrations with deterministic flow paths.
         </p>
-        <svg className="topology executive" viewBox="0 0 1360 560" role="img" aria-label="Dark NOC topology flow">
+        <svg className="topology executive" viewBox="0 0 1360 560" role="img" aria-label="Telco Autonomous Agentic AI Remediation topology flow">
           <defs>
             <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#0f3344" />

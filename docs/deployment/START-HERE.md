@@ -1,4 +1,4 @@
-# Dark NOC Start Here
+# Telco Autonomous Agentic AI Remediation Start Here
 
 This is the fastest path to redeploy this solution from this repository.
 

@@ -1,4 +1,4 @@
-# Dark NOC Access Center (Masked)
+# Telco Autonomous Agentic AI Remediation Access Center (Masked)
 
 - Hub Console: {{ HUB_CONSOLE_URL }}
 - Hub API: {{ HUB_API_URL }}

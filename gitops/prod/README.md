@@ -1,4 +1,4 @@
-# Auto Dark NOC - Prod GitOps
+# Telco Autonomous Agentic AI Remediation - Prod GitOps
 
 Single production GitOps model for Hub + Edge OpenShift using Argo CD app-of-apps.
 

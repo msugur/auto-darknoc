@@ -4,7 +4,7 @@ This repo supports modular model switching for the Hub AI stack.
 
 ## Goal
 
-Bind different model backends (from Red Hat OpenShift AI Hub Catalog) to the same Dark NOC control plane:
+Bind different model backends (from Red Hat OpenShift AI Hub Catalog) to the same Telco Autonomous Agentic AI Remediation control plane:
 
 - vLLM serving layer
 - LlamaStack distribution
@@ -53,7 +53,7 @@ oc -n dark-noc-ui rollout restart deploy/dark-noc-chatbot
 
 ## Bind Existing `my-first-model` InferenceService
 
-If the model is already deployed in namespace `my-first-model` (for example with `vLLM NVIDIA GPU ServingRuntime for KServe v0.9.1.0`), bind Dark NOC directly to that endpoint:
+If the model is already deployed in namespace `my-first-model` (for example with `vLLM NVIDIA GPU ServingRuntime for KServe v0.9.1.0`), bind Telco Autonomous Agentic AI Remediation directly to that endpoint:
 
 ```bash
 ./scripts/bind-existing-model.sh \
@@ -70,7 +70,7 @@ This updates both `dark-noc-hub` and `dark-noc-ui` `dark-noc-model-binding` Conf
    - `implementation/phase-03-ai-core/models/my-first-model/granite-3.1-8b-lab-v1-isvc.yaml`
 2. Wait for `READY=True`:
    - `oc -n my-first-model get isvc granite-31-8b-lab-v1`
-3. Bind into Dark NOC:
+3. Bind into Telco Autonomous Agentic AI Remediation:
    - use `scripts/bind-existing-model.sh` command above.
 
 ## Notes

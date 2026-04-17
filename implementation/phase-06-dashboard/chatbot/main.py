@@ -1,5 +1,5 @@
 """
-Dark NOC Chatbot Backend (Phase 06)
+Telco Autonomous Agentic AI Remediation Chatbot Backend (Phase 06)
 ===================================
 FastAPI backend for dashboard integration.
 Provides:
@@ -89,9 +89,9 @@ EXEC_REPLY_MAX_CHARS = 1600
 integrations_cache: dict[str, Any] = {"ts": 0.0, "payload": None}
 
 app = FastAPI(
-    title="Dark NOC Chatbot API",
+    title="Telco Autonomous Agentic AI Remediation Chatbot API",
     version=APP_VERSION,
-    description="Dashboard helper API for Dark NOC",
+    description="Dashboard helper API for Telco Autonomous Agentic AI Remediation",
 )
 
 app.add_middleware(
@@ -303,7 +303,7 @@ def build_context_message(
     recent = history[-4:]
     convo = "\n".join([f"{item['role']}: {item['content']}" for item in recent]) or "none"
     return (
-        "You are the Dark NOC assistant for executive operations display.\n"
+        "You are the Telco Autonomous Agentic AI Remediation assistant for executive operations display.\n"
         "Return concise, deterministic text only (no markdown tables, no disclaimers, no self-references).\n"
         "Use exactly these headers: Summary, MCP Status, Model Output, Next Action.\n"
         "Keep output under 140 words.\n"
