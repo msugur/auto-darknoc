@@ -148,6 +148,18 @@ def seed_docs(pages: list[DocPage], model: SentenceTransformer, version_pins: di
     inserted = 0
     try:
         with conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS documents (
+                    id BIGSERIAL PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    embedding vector(384) NOT NULL,
+                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
             cur.execute("DELETE FROM documents WHERE metadata->>'type' = 'documentation'")
             deleted = cur.rowcount
             if deleted > 0:
