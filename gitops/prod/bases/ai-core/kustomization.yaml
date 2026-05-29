@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - llamastack-distribution.yaml
   - rag-docs-seed-job.yaml
+  - ocpai-34-demo-enablement.yaml
 configMapGenerator:
   - name: rag-docs-seed-script
     namespace: dark-noc-rag

@@ -1,10 +1,13 @@
 # =============================================================
-# LlamaStack Distribution — RHOAI 3.3 Agent Framework
+# LlamaStack Distribution — OpenShift AI 3.4 Agent Framework
 # =============================================================
 # NOTE:
-#   The LLSD CRD schema used by current OCP AI requires:
+#   The LLSD CRD schema used by current OpenShift AI requires:
 #     - spec.server.distribution
 #   This file is aligned to llamastack.io/v1alpha1.
+#   OpenShift AI 3.4 moves this deployment onto the newer 3.4
+#   Llama Stack runtime while preserving the repo's Postgres-backed
+#   metadata store and OpenAI-compatible model endpoint contract.
 # =============================================================
 apiVersion: llamastack.io/v1alpha1
 kind: LlamaStackDistribution

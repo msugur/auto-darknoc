@@ -139,13 +139,13 @@ T+9s   Incident-audit topic updated with escalation record
 | Product | Version | Key New Features Used |
 |---------|---------|----------------------|
 | OpenShift | 4.21 | DRA GPU scheduling, SNO |
-| OpenShift AI | 3.3 | LlamaStack Operator, HardwareProfiles, vLLM 0.15.1 |
+| OpenShift AI | 3.4 | MaaS, MLflow Operator, LlamaStack, HardwareProfiles, vLLM/llm-d paths |
 | ACM | 2.15 | Argo CD Pull Agent, Edge Manager (TP) |
 | AMQ Streams | 3.1 | Kafka 4.x KRaft (no ZooKeeper) |
 | AAP | 2.5 | EDA Kafka source, Unified Gateway |
 | OpenShift Logging | 6.4 | Vector-only, LokiStack backend |
 | Granite | 4.0 H-Tiny | Hybrid Mamba-2, MoE, 128K context |
-| LlamaStack | 0.3.5 | RHOAI 3.3 built-in operator |
+| LlamaStack | 3.4 managed stream | OpenShift AI managed agent/RAG runtime |
 | LangGraph | 1.0 | PostgresSaver, interrupt(), Swarm |
 | vLLM | 0.15.1 | xgrammar structured output, tool parser |
 | Langfuse | 3.14.5 | ClickHouse OLAP, LLM-as-judge |

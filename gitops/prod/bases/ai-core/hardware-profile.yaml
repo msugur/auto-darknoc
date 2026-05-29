@@ -2,11 +2,11 @@
 # Hardware Profile — A10G GPU for Granite Inference
 # =============================================================
 # PURPOSE:
-#   Hardware Profiles replaced Accelerator Profiles in RHOAI 3.3.
+#   Hardware Profiles replaced Accelerator Profiles in OpenShift AI 3.x.
 #   This profile defines the A10G GPU resource requirements for
 #   the vLLM InferenceService running Granite 4.0 H-Tiny.
 #
-# RHOAI 3.3 CHANGE:
+# OPENSHIFT AI 3.x CHANGE:
 #   Old (2.x): AcceleratorProfile CRD
 #   New (3.x): HardwareProfile CRD
 #   If you have 2.x AcceleratorProfiles, they must be recreated

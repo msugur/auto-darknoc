@@ -1,7 +1,7 @@
 version_pins:
   openshift_container_platform: "4.21.5"
-  openshift_ai_operator: "3.3.0"
-  openshift_ai_self_managed_docs: "2.23"
+  openshift_ai_operator: "3.4.x"
+  openshift_ai_self_managed_docs: "3.4"
   amq_streams: "3.1.0"
   acm: "2.15.1"
   aap: "2.5.0"
@@ -9,7 +9,7 @@ version_pins:
   loki_operator: "6.4.2"
   servicemesh: "3.1.0"
   cloudnativepg: "1.28.1"
-  llamastack_server: "0.4.2.1+rhai0"
+  llamastack_server: "3.4 managed stream"
 
 sources:
   - product: "OpenShift Container Platform"
@@ -22,13 +22,17 @@ sources:
       - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/networking/index"
 
   - product: "Red Hat OpenShift AI Self-Managed"
-    version: "2.23"
+    version: "3.4"
     vendor: "Red Hat"
     category: "ai"
     urls:
-      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23"
-      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23/html/managing_resources"
-      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/2.23/html-single/working_with_distributed_workloads/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/release_notes/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/working_with_autorag/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/working_with_mlflow/index"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/working_with_automl"
+      - "https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/enabling_ai_safety_with_guardrails/index"
 
   - product: "Red Hat Advanced Cluster Management for Kubernetes"
     version: "2.15"
@@ -73,7 +77,7 @@ sources:
       - "https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/service_mesh/index"
 
   - product: "Llama Stack (RHOAI runtime)"
-    version: "0.4.2.1+rhai0"
+    version: "3.4 managed stream"
     vendor: "Meta / Red Hat runtime"
     category: "ai-agent"
     urls:

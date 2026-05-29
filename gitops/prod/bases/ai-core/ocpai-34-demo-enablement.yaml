@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dark-noc-ml-lifecycle
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai-lifecycle
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocpai-34-feature-gates
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+data:
+  OPENSHIFT_AI_TARGET_VERSION: "3.4"
+  MAAS_DEMO: "enabled"
+  MLFLOW_DEMO: "enabled"
+  MODEL_REGISTRY_DEMO: "enabled"
+  MODEL_TRAINING_DEMO: "enabled"
+  MODEL_PROMOTION_DEMO: "enabled"
+  NEMO_GUARDRAILS_DEMO: "enabled"
+  LLAMA_STACK_RESPONSES_API_DEMO: "enabled"
+  AUTORAG_DEMO: "tech-preview"
+  AUTOML_DEMO: "tech-preview"
+  RAGAS_EVAL_DEMO: "tech-preview"
+  GARAK_EVAL_DEMO: "tech-preview"
+  LLM_D_DISTRIBUTED_INFERENCE_DEMO: "tech-preview"
+  MCP_CATALOG_DEMO: "developer-preview"
+  OPENSHIFT_AI_MCP_SERVER_DEMO: "developer-preview"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-model-lifecycle-contract
+  namespace: dark-noc-ml-lifecycle
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai-lifecycle
+data:
+  README.md: |
+    # Dark NOC OpenShift AI 3.4 Model Lifecycle Contract
+
+    This ConfigMap records the lifecycle flow that the 3.4 demo must prove.
+    The concrete OpenShift AI resources are created by the platform UI,
+    OpenShift AI pipelines, or follow-up generated manifests after the target
+    model, object storage location, and cluster CRDs are known.
+
+    Required demo flow:
+
+    1. Baseline model serves Dark NOC incidents through MaaS or direct vLLM.
+    2. Incident/runbook examples are collected into an S3-backed training set.
+    3. AutoRAG evaluates retrieval settings against the Dark NOC runbook corpus.
+    4. AutoML trains and ranks a structured incident-severity/MTTR predictor.
+    5. A model customization or training job creates an improved candidate.
+    6. MLflow records parameters, metrics, artifacts, and evaluation results.
+    7. Model Registry stores baseline and candidate versions with lineage.
+    8. RAGAS/Garak/TrustyAI checks gate promotion.
+    9. NeMo Guardrails protects prompts and responses before tool execution.
+    10. MaaS exposes the approved model with group-based subscriptions,
+        API keys, quotas, and usage/showback.
+    11. Dark NOC agent and chatbot are rebound to the promoted model endpoint.
+
+    Promotion gate:
+
+    - Candidate RCA accuracy must improve over baseline.
+    - Candidate escalation precision must not regress.
+    - Guardrail checks must pass for prompt injection and PII scenarios.
+    - MTTR recommendations must remain executable through AAP templates.
+    - RAG citations must resolve to approved runbook or product sources.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dark-noc-ocpai-34-demo-script
+  namespace: dark-noc-ml-lifecycle
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai-lifecycle
+data:
+  demo-flow.md: |
+    # OpenShift AI 3.4 Dark NOC Demo Flow
+
+    ## Platform setup
+
+    - OpenShift AI Operator channel: stable-3.4.
+    - DataScienceCluster components: dashboard, workbenches, modelcontroller,
+      kserve, modelregistry, datasciencepipelines, llamastack, mlflowoperator,
+      trustyai, ray, trainingoperator.
+    - Removed component: codeflare.
+
+    ## Demo scenes
+
+    1. Show governed model access with MaaS subscriptions, API keys, quotas,
+       rate limits, and usage reporting.
+    2. Trigger nginx OOMKilled or crash loop from the edge cluster.
+    3. Show logs arriving through Kafka and the Dark NOC agent calling the
+       Llama Stack Responses API path.
+    4. Show NeMo Guardrails blocking unsafe prompt/tool behavior before AAP
+       remediation.
+    5. Run AutoRAG against Dark NOC runbooks and compare retrieval settings.
+    6. Run AutoML against incident features to rank severity/MTTR predictors.
+    7. Train or customize a candidate model, track it in MLflow, and register
+       it in Model Registry.
+    8. Evaluate the candidate with RAGAS/Garak/TrustyAI checks.
+    9. Promote the approved candidate and rebind Dark NOC to the new endpoint.
+    10. Re-run the incident and show improved confidence/accuracy with lower
+        manual escalation.

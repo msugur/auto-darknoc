@@ -1,19 +1,21 @@
 # =============================================================
-# DataScienceCluster — Activates RHOAI 3.3 Components
+# DataScienceCluster — Activates OpenShift AI 3.4 Components
 # =============================================================
 # PURPOSE:
-#   The DataScienceCluster CR is the master switch for RHOAI 3.3.
+#   The DataScienceCluster CR is the master switch for OpenShift AI 3.4.
 #   It controls which RHOAI components are enabled/disabled.
 #   Apply this AFTER the RHOAI operator CSV is Succeeded.
 #
-# RHOAI 3.3 BREAKING CHANGES FROM 2.x:
+# OPENSHIFT AI 3.4 TRACK:
 #   - ModelServing: Serverless (KNative) is DEPRECATED.
 #     Use KServe RawDeployment mode instead.
 #     Set: kserve.managementState: Managed (not serverless)
 #   - Accelerator Profiles RENAMED to Hardware Profiles
 #   - TGIS runtime REMOVED — use vLLM exclusively
-#   - AI Pipelines (renamed from Data Science Pipelines)
-#   - LlamaStack Operator is NEW in 3.3 (not in 2.x)
+#   - MLflow Operator is managed through this CR
+#   - NeMo Guardrails is supported for safe model access
+#   - Kubeflow Training Operator v2 is the training path; v1 is deprecated
+#   - CodeFlare Operator was removed from OpenShift AI 3.4
 #
 # COMPONENTS ENABLED:
 #   - Dashboard:          RHOAI Web console
@@ -22,12 +24,13 @@
 #   - Kserve:             Model serving (RawDeployment mode)
 #   - ModelRegistry:      Model catalog backed by MinIO
 #   - DataSciencePipelines: AI workflow pipelines (formerly DS Pipelines)
-#   - LlamaStack:         NEW in 3.3 — agent framework
+#   - LlamaStack:         Agent/RAG orchestration
+#   - MLflowOperator:     Experiment tracking and lifecycle metadata
+#   - TrainingOperator:   Kubeflow Trainer v2 based model training
+#   - TrustyAI:           Evaluation/guardrails integration surface
 #
-# COMPONENTS DISABLED (to save resources):
-#   - TrustyAI:           AI fairness/bias (not needed for demo)
-#   - Ray:                Distributed training (not needed for demo)
-#   - CodeFlare:          ML cluster management (not needed)
+# COMPONENTS DISABLED:
+#   - CodeFlare:          Removed in OpenShift AI 3.4
 #
 # APPLY WITH:
 #   oc apply -f datasciencecluster.yaml
@@ -79,23 +82,26 @@ spec:
     datasciencepipelines:
       managementState: Managed
 
-    # LlamaStack — NEW in RHOAI 3.3 — agent framework
+    # LlamaStack — agent framework, RAG APIs, Responses API path
     llamastack:
       managementState: Managed
 
-    # --- DISABLED for demo resource efficiency ---
-    # TrustyAI — AI bias/fairness monitoring
+    # MLflow Operator — experiment tracking and model lifecycle metadata
+    mlflowoperator:
+      managementState: Managed
+
+    # TrustyAI — model monitoring, safety/evaluation integrations
     trustyai:
-      managementState: Removed
+      managementState: Managed
 
-    # Ray — distributed training cluster
+    # KubeRay — distributed workloads used by AutoML/training demos
     ray:
-      managementState: Removed
+      managementState: Managed
 
-    # CodeFlare — ML cluster management
+    # CodeFlare — removed in OpenShift AI 3.4
     codeflare:
       managementState: Removed
 
-    # Trainium/Inferentia — AWS specialized accelerators
+    # Kubeflow Trainer v2 — model customization/training path
     trainingoperator:
-      managementState: Removed
+      managementState: Managed

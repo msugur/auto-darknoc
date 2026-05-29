@@ -1,13 +1,13 @@
 # Dark NOC Product & Tool Version Matrix
 
-Last updated: 2026-03-11 15:54 EDT
+Last updated: 2026-05-29
 
 ## 1) Red Hat Platform Stack
 
 | Product | Version | Where Used |
 |---|---:|---|
 | OpenShift Container Platform | 4.21.x | Hub and Edge cluster base |
-| Red Hat OpenShift AI Operator | 3.3.0 | Hub AI core (`DataScienceCluster`, model serving) |
+| Red Hat OpenShift AI Operator | 3.4.x | Hub AI core (`DataScienceCluster`, model serving, MaaS, MLflow, AutoML/AutoRAG demos) |
 | Red Hat Advanced Cluster Management (ACM) | 2.15.1 | Hub/Edge multicluster lifecycle and policy |
 | Red Hat Ansible Automation Platform (AAP) | 2.5.x | Hub controller, EDA, automation workflows |
 | Red Hat Streams for Apache Kafka (AMQ Streams) | 3.1.0 | Kafka operator on Hub |
@@ -25,10 +25,15 @@ Last updated: 2026-03-11 15:54 EDT
 |---|---:|---|
 | Granite | 4.0 H-Tiny | Incident reasoning/RCA model |
 | vLLM | 0.15.1 | Inference serving layer |
-| LlamaStack runtime | 0.4.2.1+rhai0 | AI runtime/orchestration layer |
+| LlamaStack runtime | 3.4 managed stream | AI runtime/orchestration layer; Responses API demo path |
 | LangGraph | 1.0.0 | Autonomous NOC workflow engine |
 | FastMCP | 3.0.2 | MCP servers for tool integration |
 | pgvector | 0.8.1 | RAG vector index in Postgres |
+| MLflow Operator | 3.4 managed component | Experiment tracking and model lifecycle metadata |
+| NeMo Guardrails | 3.4 supported feature | Guardrail checks before remediation/tool execution |
+| AutoML | 3.4 Technology Preview | Structured incident severity/MTTR model training demo |
+| AutoRAG | 3.4 Technology Preview | Runbook RAG optimization demo |
+| Models-as-a-Service | 3.4 GA | Governed model endpoint, subscriptions, quotas, API keys, showback |
 
 ## 3) Data, Observability, and UI
 

@@ -3,7 +3,7 @@
 # =============================================================
 # PURPOSE:
 #   Service Mesh provides mTLS between all Dark NOC microservices,
-#   traffic management, and distributed tracing. RHOAI 3.3 uses
+#   traffic management, and distributed tracing. OpenShift AI 3.4 uses
 #   Service Mesh for model serving network policies and gateway
 #   routing of inference traffic.
 #
@@ -14,7 +14,7 @@
 #   This is ~40% lower overhead than sidecar mode.
 #
 # WHY WAVE 0:
-#   RHOAI 3.3 operator checks for Service Mesh CRDs at install.
+#   OpenShift AI 3.4 operator checks for Service Mesh CRDs at install.
 #   Must be installed before RHOAI or model serving webhooks fail.
 #
 # COMPONENTS INSTALLED:

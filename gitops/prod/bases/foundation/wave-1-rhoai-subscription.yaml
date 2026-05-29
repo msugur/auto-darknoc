@@ -1,18 +1,18 @@
 # =============================================================
-# Red Hat OpenShift AI 3.3 — Operator Subscription
+# Red Hat OpenShift AI 3.4 — Operator Subscription
 # =============================================================
 # PURPOSE:
 #   Installs the RHOAI operator which manages the entire
 #   AI/ML platform: model serving, LlamaStack, workbenches,
 #   pipelines, and the model registry.
 #
-# WHY RHOAI 3.3:
-#   - LlamaStack Operator built-in (deploys Llama Stack via single CR)
-#   - KServe RawDeployment (Serverless deprecated in 3.3)
-#   - Hardware Profiles replace Accelerator Profiles
-#   - KEDA autoscaling for inference services (Tech Preview)
-#   - Air-gapped/disconnected deployment support
-#   - EAGLE speculative decoding (2x inference throughput)
+# WHY RHOAI 3.4:
+#   - Models-as-a-Service is GA for governed model access
+#   - MLflow Operator is managed by DataScienceCluster
+#   - NeMo Guardrails is supported for safety controls
+#   - AutoML and AutoRAG are available as Technology Preview
+#   - Llama Stack Responses API improves OpenAI compatibility
+#   - llm-d distributed inference adds 3.4 scheduler/metrics updates
 #
 # NOTE: RHOAI 3.x is NOT an upgrade from 2.x — fresh install only.
 #       If rhods-operator 2.x is already installed, uninstall first.
@@ -22,7 +22,7 @@
 #
 # VERIFY:
 #   oc get csv -n redhat-ods-operator | grep rhods-operator
-#   # Wait for: rhods-operator.v3.3.x    Succeeded
+#   # Wait for: rhods-operator.v3.4.x    Succeeded
 #
 # WHAT HAPPENS AFTER:
 #   - RHOAI operator pod starts in redhat-ods-operator namespace
@@ -46,7 +46,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable-3.3       # pin OpenShift AI 3.3 stream
+  channel: stable-3.4       # pin OpenShift AI 3.4 stream
   installPlanApproval: Automatic
   name: rhods-operator
   source: redhat-operators

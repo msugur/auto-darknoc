@@ -7,7 +7,7 @@ spec:
   project: auto-darknoc-prod
   source:
     repoURL: https://github.com/msugur/auto-darknoc.git
-    targetRevision: main
+    targetRevision: ocpai-3.4
     path: gitops/prod/apps
   destination:
     server: https://kubernetes.default.svc
