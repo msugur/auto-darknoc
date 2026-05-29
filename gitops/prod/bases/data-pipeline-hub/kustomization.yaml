@@ -6,6 +6,7 @@ resources:
   - kafka-cluster.yaml
   - kafka-topics.yaml
   - langfuse-postgres-cnpg-netpol.yaml
+  - langfuse-postgres-hub-netpol.yaml
   - langfuse-route-ingress-netpol.yaml
   - langfuse-postgres-cluster.yaml
   - langfuse-route.yaml

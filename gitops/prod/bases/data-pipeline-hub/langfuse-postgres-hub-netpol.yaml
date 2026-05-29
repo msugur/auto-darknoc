@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-hub-to-langfuse-postgres
+  namespace: dark-noc-observability
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: langfuse-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dark-noc-hub
+      ports:
+        - protocol: TCP
+          port: 5432
