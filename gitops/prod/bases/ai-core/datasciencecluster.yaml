@@ -41,7 +41,7 @@
 #   oc get route rhods-dashboard -n redhat-ods-applications
 # =============================================================
 ---
-apiVersion: datasciencecluster.opendatahub.io/v1
+apiVersion: datasciencecluster.opendatahub.io/v2
 kind: DataScienceCluster
 metadata:
   name: default-dsc
@@ -57,21 +57,12 @@ spec:
     workbenches:
       managementState: Managed
 
-    # Model Controller — manages InferenceService CRs
-    modelcontroller:
-      managementState: Managed
-
     # KServe — model serving with RawDeployment (NOT Serverless)
     kserve:
       managementState: Managed
-      serving:
+      rawDeploymentServiceConfig: Headless
+      modelsAsService:
         managementState: Managed
-        name: kserve
-        # RawDeployment: standard k8s Deployment + Service
-        # No KNative/Serverless dependencies required
-        ingressGateway:
-          certificate:
-            type: SelfSigned    # Use cert-manager self-signed for demo
 
     # ModelRegistry — model catalog backed by MinIO
     modelregistry:
@@ -79,11 +70,11 @@ spec:
       registriesNamespace: "rhoai-model-registries"
 
     # Data Science Pipelines (formerly AI Pipelines in 2.x)
-    datasciencepipelines:
+    aipipelines:
       managementState: Managed
 
     # LlamaStack — agent framework, RAG APIs, Responses API path
-    llamastack:
+    llamastackoperator:
       managementState: Managed
 
     # MLflow Operator — experiment tracking and model lifecycle metadata
@@ -93,9 +84,14 @@ spec:
     # TrustyAI — model monitoring, safety/evaluation integrations
     trustyai:
       managementState: Managed
+      mcpGuardrailsMode: true
 
     # KubeRay — distributed workloads used by AutoML/training demos
     ray:
+      managementState: Managed
+
+    # Kubeflow Trainer v2
+    trainer:
       managementState: Managed
 
     # CodeFlare — removed in OpenShift AI 3.4

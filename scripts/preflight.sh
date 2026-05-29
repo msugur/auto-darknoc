@@ -117,10 +117,10 @@ if [[ -z "${HUB_API_URL:-}" ]]; then
 else
     if login_hub; then
         HUB_VERSION="$(server_version || true)"
-        if [[ "${HUB_VERSION}" == 4.21* ]]; then
+        if [[ "${HUB_VERSION}" == 4.20* || "${HUB_VERSION}" == 4.21* ]]; then
             pass "Hub cluster accessible — OCP version: ${HUB_VERSION}"
         else
-            fail "Hub cluster is OCP ${HUB_VERSION} — expected 4.21.x"
+            fail "Hub cluster is OCP ${HUB_VERSION} — expected 4.20.x or 4.21.x"
         fi
     else
         fail "Cannot connect to hub cluster at ${HUB_API_URL}"
@@ -228,10 +228,10 @@ if [[ -z "${EDGE_API_URL:-}" ]]; then
 else
     if login_edge; then
         EDGE_VERSION="$(server_version || true)"
-        if [[ "${EDGE_VERSION}" == 4.21* ]]; then
+        if [[ "${EDGE_VERSION}" == 4.20* || "${EDGE_VERSION}" == 4.21* ]]; then
             pass "Edge cluster accessible — OCP version: ${EDGE_VERSION}"
         else
-            fail "Edge cluster is OCP ${EDGE_VERSION} — expected 4.21.x"
+            fail "Edge cluster is OCP ${EDGE_VERSION} — expected 4.20.x or 4.21.x"
         fi
     else
         fail "Cannot connect to edge cluster at ${EDGE_API_URL}"

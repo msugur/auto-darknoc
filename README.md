@@ -225,7 +225,7 @@ Runbooks used by the RAG seed pipeline are under:
 
 | Product | Version | Role |
 |---------|---------|------|
-| OpenShift Container Platform | 4.21 | Container runtime (both clusters) |
+| OpenShift Container Platform | 4.20/4.21 | Container runtime (both clusters) |
 | Red Hat OpenShift AI | 3.4 | MLOps platform, model serving, MaaS, MLflow, AutoML/AutoRAG |
 | Red Hat ACM | 2.15 | Multi-cluster management |
 | Red Hat Streams for Apache Kafka | 3.1 | Event streaming (KRaft, no ZooKeeper) |
