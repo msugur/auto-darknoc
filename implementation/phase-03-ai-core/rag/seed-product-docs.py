@@ -148,7 +148,11 @@ def seed_docs(pages: list[DocPage], model: SentenceTransformer, version_pins: di
     inserted = 0
     try:
         with conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            try:
+                cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            except psycopg2.errors.InsufficientPrivilege:
+                conn.rollback()
+                print("WARN: vector extension already expected; continuing without extension creation")
             cur.execute(
                 """
                 CREATE TABLE IF NOT EXISTS documents (
