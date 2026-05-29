@@ -11,7 +11,7 @@ Last updated: 2026-05-29
 | Red Hat Advanced Cluster Management (ACM) | 2.15.1 | Hub/Edge multicluster lifecycle and policy |
 | Red Hat Ansible Automation Platform (AAP) | 2.5.x | Hub controller, EDA, automation workflows |
 | Red Hat Streams for Apache Kafka (AMQ Streams) | 3.1.0 | Kafka operator on Hub |
-| Apache Kafka (KRaft mode) | 4.0.0 (`metadataVersion: 4.0-IV3`) | Event backbone (`nginx-logs`, remediation, audit topics) |
+| Apache Kafka (KRaft mode) | 4.2.0 (`metadataVersion: 4.2`) | Event backbone (`nginx-logs`, remediation, audit topics) |
 | Red Hat OpenShift Logging | 6.4.2 | Hub + Edge logging pipeline |
 | Red Hat Loki Operator | 6.4.2 | Hub LokiStack deployment |
 | OpenShift Service Mesh | 3.1.0 | Hub service connectivity/security layer |

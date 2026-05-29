@@ -49,8 +49,8 @@ metadata:
     dark-noc/layer: streaming
 spec:
   kafka:
-    version: "4.0.0"                   # Kafka 4.x via AMQ Streams 3.1
-    metadataVersion: "4.0-IV3"        # KRaft metadata version
+    version: "4.2.0"                   # Kafka 4.x via AMQ Streams 3.2
+    metadataVersion: "4.2"             # KRaft metadata version
     replicas: 1                        # Single node for demo (no HA)
     listeners:
       - name: plain
