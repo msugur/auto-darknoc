@@ -16,8 +16,13 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              python -m pip install --no-cache-dir requests
+              python -m pip install --no-cache-dir --target /tmp/pylibs requests
               python /scripts/publish_access_center.py
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PYTHONPATH
+              value: /tmp/pylibs
           envFrom:
             - secretRef:
                 name: platform-credentials

@@ -26,3 +26,10 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dark-noc-hub
+      ports:
+        - protocol: TCP
+          port: 5432

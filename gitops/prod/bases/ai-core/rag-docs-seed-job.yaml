@@ -50,6 +50,23 @@ spec:
             - -lc
             - |
               set -euo pipefail
+              python - <<'PY'
+              import os, socket, time
+
+              host = os.environ["PGVECTOR_HOST"]
+              port = int(os.environ.get("PGVECTOR_PORT", "5432"))
+              deadline = time.time() + 300
+              while time.time() < deadline:
+                  try:
+                      with socket.create_connection((host, port), timeout=5):
+                          print(f"pgvector is reachable at {host}:{port}")
+                          break
+                  except OSError as exc:
+                      print(f"waiting for pgvector at {host}:{port}: {exc}")
+                      time.sleep(10)
+              else:
+                  raise SystemExit(f"pgvector did not become reachable at {host}:{port}")
+              PY
               python -m pip install --no-cache-dir --target /tmp/pylibs \
                 requests==2.32.3 \
                 pyyaml==6.0.2 \

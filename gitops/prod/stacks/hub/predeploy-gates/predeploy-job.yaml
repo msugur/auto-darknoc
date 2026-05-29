@@ -17,8 +17,8 @@ spec:
               set -euo pipefail
               CURRENT=$(oc get clusterversion version -o jsonpath='{.status.desired.version}')
               echo "Cluster version: ${CURRENT}"
-              if [[ ! "${CURRENT}" =~ ^4\.21\.[0-9]+$ ]]; then
-                echo "Expected OCP 4.21.x before deployment"
+              if [[ ! "${CURRENT}" =~ ^4\.(20|21)\.[0-9]+$ ]]; then
+                echo "Expected OCP 4.20.x or 4.21.x before deployment"
                 exit 1
               fi
               if [[ -n "${HUB_CPU_MACHINESET:-}" ]]; then
