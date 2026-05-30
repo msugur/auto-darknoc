@@ -63,9 +63,9 @@ Runtime images:
 - `quay.io/msugur/auto-darknoc:chatbot-ocpai-3.4-ready`
 
 Final end-to-end rehearsal:
-- Incident `4d44f91c-4a43-42df-831b-e72144e32a46`
-- AAP job `7` completed `successful`
-- ServiceNow ticket `INC0010013`
+- Incident `675de4c2-b537-403f-a259-31bbcc53f6cf`
+- AAP job `8` completed `successful`
+- ServiceNow ticket `INC0010014`
 - Audit record written
 - Integrations API reported `15/15 up`
 

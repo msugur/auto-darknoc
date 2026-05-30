@@ -16,6 +16,7 @@
 - External integration repair: live Slack secret restored from rendered `xoxb` bot token; `auth.test` and `chat.postMessage` to `#demos` succeeded. ServiceNow timeout root cause isolated to `assignment_group=NOC-Team`; MCP patched to omit display-name assignment group for real ServiceNow. Rebuilt `mcp-servicenow-4`, rolled out digest `sha256:98d2e089f0f0c0af7f3f0855f807b95927e800a682bcb49a4434ad9a9f32e242`, and validated Lightspeed incident `c43c1293` with AAP job `6` and ServiceNow ticket `INC0010012`.
 - Quay runtime images: all app runtime images mirrored to `quay.io/msugur/auto-darknoc:*ocpai-3.4-ready` tags and `*-latest` aliases; manifests now use the stable `ocpai-3.4-ready` tags for agent, MCP servers, dashboard, and chatbot.
 - Final Quay-backed rehearsal: Lightspeed UI trigger processed incident `4d44f91c`; AAP job `7` completed `successful`; ServiceNow ticket `INC0010013` created; audit record was written; integrations API reported `15/15 up`.
+- Final full Quay release rehearsal: Lightspeed UI trigger processed incident `675de4c2`; AAP job `8` completed `successful`; ServiceNow ticket `INC0010014` created; audit record was written; integrations API reported `15/15 up`.
 - Cleanup: stale failed `aap-bootstrap-content-*` pods/job were removed before rerunning bootstrap.
 
 ## Implementation Status
