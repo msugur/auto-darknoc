@@ -98,7 +98,20 @@ async def call_mcp_tool(server_url: str, tool_name: str, args: dict) -> dict:
                 first = result.content[0]
                 text = getattr(first, "text", "")
                 if text:
-                    return json.loads(text)
+                    try:
+                        return json.loads(text)
+                    except json.JSONDecodeError:
+                        logger.warning(
+                            "[MCP] %s returned non-JSON text from %s: %s",
+                            tool_name,
+                            server_url,
+                            text[:300],
+                        )
+                        return {
+                            "success": False,
+                            "error": "non-json-response",
+                            "raw": text[:1000],
+                        }
     return {}
 
 

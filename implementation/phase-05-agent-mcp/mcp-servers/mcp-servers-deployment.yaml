@@ -325,6 +325,7 @@ spec:
       containers:
         - name: server
           image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-servicenow:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8006
           env:

@@ -36,6 +36,7 @@ SNOW_PASSWORD = os.getenv("SERVICENOW_PASSWORD", "")
 SNOW_MODE = os.getenv("SERVICENOW_MODE", "auto").lower()  # auto|mock|real
 # Enforced global caller for all incidents created by Dark NOC.
 SNOW_CALLER_NAME = os.getenv("SERVICENOW_CALLER_NAME", "Mithun Sugur")
+SNOW_TIMEOUT_SECONDS = float(os.getenv("SERVICENOW_TIMEOUT_SECONDS", "45"))
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
 SLACK_NOC_CHANNEL = os.getenv("SLACK_NOC_CHANNEL", "#demos")
 SLACK_BASE_URL = "https://slack.com/api"
@@ -63,7 +64,7 @@ def snow_client() -> httpx.Client:
         base_url=f"{SNOW_URL}/api/now",
         headers=headers,
         auth=auth,
-        timeout=15,
+        timeout=SNOW_TIMEOUT_SECONDS,
     )
 
 
@@ -186,28 +187,48 @@ def create_incident(
     """
     _ = caller_id  # intentionally ignored to enforce global policy
     caller_value = SNOW_CALLER_NAME
-    with snow_client() as client:
-        if is_real_servicenow():
-            caller_sys_id = _resolve_or_create_caller_sys_id(client, SNOW_CALLER_NAME)
-            if caller_sys_id:
-                caller_value = caller_sys_id
+    try:
+        with snow_client() as client:
+            if is_real_servicenow():
+                caller_sys_id = _resolve_or_create_caller_sys_id(client, SNOW_CALLER_NAME)
+                if caller_sys_id:
+                    caller_value = caller_sys_id
 
-        payload = {
+            payload = {
+                "short_description": short_description[:160],
+                "description": description,
+                "priority": str(priority),
+                "caller_id": caller_value,
+                "category": category,
+                "subcategory": subcategory,
+                "state": "1",           # 1 = New
+                "urgency": str(priority),
+                "impact": str(priority),
+            }
+            if is_real_servicenow():
+                # Real ServiceNow expects assignment_group to be a sys_id. A
+                # display name can trigger slow reference resolution/timeouts.
+                if re.fullmatch(r"[0-9a-fA-F]{32}", assignment_group):
+                    payload["assignment_group"] = assignment_group
+            else:
+                payload["assignment_group"] = assignment_group
+            body = payload if is_real_servicenow() else {"record": payload}
+            resp = client.post("/table/incident", json=body)
+            resp.raise_for_status()
+            data = _extract_record(resp.json())
+    except Exception as exc:
+        return {
+            "success": False,
+            "error": str(exc),
+            "ticket_number": "INC-UNAVAILABLE",
+            "sys_id": "",
+            "state": "Unavailable",
+            "priority": priority,
             "short_description": short_description[:160],
-            "description": description,
-            "priority": str(priority),
-            "caller_id": caller_value,
-            "assignment_group": assignment_group,
-            "category": category,
-            "subcategory": subcategory,
-            "state": "1",           # 1 = New
-            "urgency": str(priority),
-            "impact": str(priority),
+            "caller_name": SNOW_CALLER_NAME,
+            "incident_url": _incident_url("", ""),
+            "slack_notification": {"sent": False, "reason": "servicenow_create_failed"},
         }
-        body = payload if is_real_servicenow() else {"record": payload}
-        resp = client.post("/table/incident", json=body)
-        resp.raise_for_status()
-        data = _extract_record(resp.json())
 
     result = {
         "success": True,
