@@ -7,9 +7,16 @@ Single production GitOps model for Hub + Edge OpenShift using Argo CD app-of-app
 - Real ServiceNow integration (no mock deployment)
 - Slack workspace/channel: `octo-emerging-tech.slack.com` / `#demos`
 - Images: `quay.io/msugur/auto-darknoc:<component-tag>`
-- Current runtime image tags:
-  - `quay.io/msugur/auto-darknoc:agent-1515730`
-  - `quay.io/msugur/auto-darknoc:mcp-servicenow-1515730`
+- Current release image tags (`ocpai-3.4-ready`):
+  - `quay.io/msugur/auto-darknoc:agent-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-openshift-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-lokistack-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-kafka-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-aap-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-slack-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:mcp-servicenow-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:dashboard-ocpai-3.4-ready`
+  - `quay.io/msugur/auto-darknoc:chatbot-ocpai-3.4-ready`
 - LlamaStack deployed on hub; model endpoint bound to `my-first-model` inference service
 
 ## Folder map

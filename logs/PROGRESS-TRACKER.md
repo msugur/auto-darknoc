@@ -4,9 +4,9 @@
 
 ---
 
-## Current Live Status — 2026-05-29
+## Current Live Status — 2026-05-30
 
-- GitOps health: 13/14 applications `Synced Healthy`; `agent-mcp-hub` is `Healthy` but temporarily `OutOfSync` because live `mcp-aap` was pointed at the working AAP controller route after internal-service API auth returned 401.
+- GitOps health: 14/14 applications `Synced Healthy`.
 - Integrations API: `15/15 up`, platform availability `100%`.
 - AAP: licensed and operational; bootstrap content job rerun successfully; templates `restart-nginx` and `lightspeed-generate-and-run` exist.
 - Agent: rebuilt as `dark-noc-agent-5` from local source with tolerant MCP response parsing; live secret fixed to `pgvector-postgres-rw.dark-noc-rag.svc:5432/noc_rag`.
@@ -14,7 +14,7 @@
 - Final rehearsal: Lightspeed UI trigger processed incident `9e705c75`; AAP job `4` completed `successful`; audit record was written. External ServiceNow create timed out and Slack sends returned `invalid_auth`, so those remain external credential/service follow-ups.
 - Follow-up rehearsal: Lightspeed UI trigger processed incident `3d459024`; AAP job `5` completed `successful`; audit record was written. ServiceNow now returns structured fallback ticket `INC-UNAVAILABLE`; Slack still returns `invalid_auth`.
 - External integration repair: live Slack secret restored from rendered `xoxb` bot token; `auth.test` and `chat.postMessage` to `#demos` succeeded. ServiceNow timeout root cause isolated to `assignment_group=NOC-Team`; MCP patched to omit display-name assignment group for real ServiceNow. Rebuilt `mcp-servicenow-4`, rolled out digest `sha256:98d2e089f0f0c0af7f3f0855f807b95927e800a682bcb49a4434ad9a9f32e242`, and validated Lightspeed incident `c43c1293` with AAP job `6` and ServiceNow ticket `INC0010012`.
-- Quay runtime images: mirrored and verified `quay.io/msugur/auto-darknoc:agent-1515730` (`sha256:a502107b61aa3310a3c49658bfbe6c87046694cd247025393b6efd31ad8a0773`) and `quay.io/msugur/auto-darknoc:mcp-servicenow-1515730` (`sha256:98d2e089f0f0c0af7f3f0855f807b95927e800a682bcb49a4434ad9a9f32e242`); manifests now use these versioned Quay tags.
+- Quay runtime images: all app runtime images mirrored to `quay.io/msugur/auto-darknoc:*ocpai-3.4-ready` tags and `*-latest` aliases; manifests now use the stable `ocpai-3.4-ready` tags for agent, MCP servers, dashboard, and chatbot.
 - Final Quay-backed rehearsal: Lightspeed UI trigger processed incident `4d44f91c`; AAP job `7` completed `successful`; ServiceNow ticket `INC0010013` created; audit record was written; integrations API reported `15/15 up`.
 - Cleanup: stale failed `aap-bootstrap-content-*` pods/job were removed before rerunning bootstrap.
 

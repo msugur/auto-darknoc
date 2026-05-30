@@ -56,8 +56,12 @@ if ! kill -0 "$PF_PID" >/dev/null 2>&1; then
   exit 1
 fi
 
-agent_digest="${AGENT_DIGEST:-$(oc -n dark-noc-hub get is dark-noc-agent -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].image}')}"
-snow_digest="${SERVICENOW_DIGEST:-$(oc -n dark-noc-mcp get is mcp-servicenow -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].image}')}"
+get_digest() {
+  local namespace="$1"
+  local image_stream="$2"
+  oc -n "$namespace" get is "$image_stream" \
+    -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].image}'
+}
 
 mirror_one() {
   local component="$1"
@@ -72,21 +76,38 @@ mirror_one() {
   fi
 }
 
-mirror_one \
-  "dark-noc-agent" \
-  "localhost:${LOCAL_REGISTRY_PORT}/dark-noc-hub/dark-noc-agent@${agent_digest}" \
-  "agent-${TAG_SUFFIX}" \
-  "agent-latest"
+runtime_images=(
+  "dark-noc-agent|dark-noc-hub|dark-noc-agent|agent"
+  "mcp-openshift|dark-noc-mcp|mcp-openshift|mcp-openshift"
+  "mcp-lokistack|dark-noc-mcp|mcp-lokistack|mcp-lokistack"
+  "mcp-kafka|dark-noc-mcp|mcp-kafka|mcp-kafka"
+  "mcp-aap|dark-noc-mcp|mcp-aap|mcp-aap"
+  "mcp-slack|dark-noc-mcp|mcp-slack|mcp-slack"
+  "mcp-servicenow|dark-noc-mcp|mcp-servicenow|mcp-servicenow"
+  "dark-noc-dashboard|dark-noc-ui|dark-noc-dashboard|dashboard"
+  "dark-noc-chatbot|dark-noc-ui|dark-noc-chatbot|chatbot"
+)
 
-mirror_one \
-  "mcp-servicenow" \
-  "localhost:${LOCAL_REGISTRY_PORT}/dark-noc-mcp/mcp-servicenow@${snow_digest}" \
-  "mcp-servicenow-${TAG_SUFFIX}" \
-  "mcp-servicenow-latest"
+for item in "${runtime_images[@]}"; do
+  IFS="|" read -r component namespace image_stream tag_prefix <<<"$item"
+  digest="$(get_digest "$namespace" "$image_stream")"
+  mirror_one \
+    "$component" \
+    "localhost:${LOCAL_REGISTRY_PORT}/${namespace}/${image_stream}@${digest}" \
+    "${tag_prefix}-${TAG_SUFFIX}" \
+    "${tag_prefix}-latest"
+done
 
 cat <<EOF
 
 Runtime image mirror complete.
 - ${QUAY_REPO}:agent-${TAG_SUFFIX}
+- ${QUAY_REPO}:mcp-openshift-${TAG_SUFFIX}
+- ${QUAY_REPO}:mcp-lokistack-${TAG_SUFFIX}
+- ${QUAY_REPO}:mcp-kafka-${TAG_SUFFIX}
+- ${QUAY_REPO}:mcp-aap-${TAG_SUFFIX}
+- ${QUAY_REPO}:mcp-slack-${TAG_SUFFIX}
 - ${QUAY_REPO}:mcp-servicenow-${TAG_SUFFIX}
+- ${QUAY_REPO}:dashboard-${TAG_SUFFIX}
+- ${QUAY_REPO}:chatbot-${TAG_SUFFIX}
 EOF

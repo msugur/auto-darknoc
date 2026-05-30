@@ -34,7 +34,7 @@ spec:
         - name: quay-pull
       containers:
         - name: agent
-          image: quay.io/msugur/auto-darknoc:agent-1515730
+          image: quay.io/msugur/auto-darknoc:agent-ocpai-3.4-ready
           imagePullPolicy: Always
           env:
             - name: VLLM_URL

@@ -1,8 +1,8 @@
 # Dark NOC Demo Package Validation Report
 
 **Package Folder:** `darknoc-demo`  
-**Generated On:** 2026-03-10  
-**Validation Type:** Static package validation + live runtime/build snapshot
+**Generated On:** 2026-05-30  
+**Validation Type:** Static package validation + live GitOps/runtime snapshot
 
 ## 1) Packaging Outcome
 
@@ -40,18 +40,34 @@ File inventory from validation:
 
 Cluster context:
 - user: `admin`
-- api: `https://api.ocp.v8w9c.sandbox205.opentlc.com:6443`
+- api: `https://api.ocp.z6ch9.sandbox2776.opentlc.com:6443`
+
+GitOps:
+- All 14 Argo applications are `Synced Healthy`.
+- Latest release branch: `ocpai-3.4`
 
 Deployments at capture time:
 - `dark-noc-ui`: `dark-noc-dashboard` `1/1`, `dark-noc-chatbot` `1/1`
 - `dark-noc-mcp`: all 6 MCP deployments `1/1`
 - `dark-noc-hub`: `dark-noc-agent` `1/1`
 
-Recent successful builds:
-- Dashboard: `dark-noc-dashboard-10` (latest, complete)
-- Chatbot: `dark-noc-chatbot-11` (latest, complete)
-- Agent: `dark-noc-agent-16` (complete)
-- MCP ServiceNow: `mcp-servicenow-6` (complete)
+Runtime images:
+- `quay.io/msugur/auto-darknoc:agent-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-openshift-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-lokistack-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-kafka-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-aap-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-slack-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:mcp-servicenow-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:dashboard-ocpai-3.4-ready`
+- `quay.io/msugur/auto-darknoc:chatbot-ocpai-3.4-ready`
+
+Final end-to-end rehearsal:
+- Incident `4d44f91c-4a43-42df-831b-e72144e32a46`
+- AAP job `7` completed `successful`
+- ServiceNow ticket `INC0010013`
+- Audit record written
+- Integrations API reported `15/15 up`
 
 ## 4) Artifacts Included for Reuse
 

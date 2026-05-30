@@ -38,9 +38,11 @@ spec:
         app: mcp-openshift
     spec:
       serviceAccountName: mcp-openshift-sa
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-openshift:latest
+          image: quay.io/msugur/auto-darknoc:mcp-openshift-ocpai-3.4-ready
           ports:
             - containerPort: 8001
           env:
@@ -106,9 +108,11 @@ spec:
       labels:
         app: mcp-lokistack
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-lokistack:latest
+          image: quay.io/msugur/auto-darknoc:mcp-lokistack-ocpai-3.4-ready
           ports:
             - containerPort: 8002
           env:
@@ -156,9 +160,11 @@ spec:
       labels:
         app: mcp-kafka
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-kafka:latest
+          image: quay.io/msugur/auto-darknoc:mcp-kafka-ocpai-3.4-ready
           ports:
             - containerPort: 8003
           env:
@@ -206,9 +212,11 @@ spec:
       labels:
         app: mcp-aap
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-aap:latest
+          image: quay.io/msugur/auto-darknoc:mcp-aap-ocpai-3.4-ready
           ports:
             - containerPort: 8004
           env:
@@ -267,9 +275,11 @@ spec:
       labels:
         app: mcp-slack
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-slack:latest
+          image: quay.io/msugur/auto-darknoc:mcp-slack-ocpai-3.4-ready
           ports:
             - containerPort: 8005
           env:
@@ -329,7 +339,7 @@ spec:
         - name: quay-pull
       containers:
         - name: server
-          image: quay.io/msugur/auto-darknoc:mcp-servicenow-1515730
+          image: quay.io/msugur/auto-darknoc:mcp-servicenow-ocpai-3.4-ready
           imagePullPolicy: Always
           ports:
             - containerPort: 8006

@@ -17,9 +17,11 @@ spec:
       labels:
         app: dark-noc-dashboard
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: dashboard
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-ui/dark-noc-dashboard:latest
+          image: quay.io/msugur/auto-darknoc:dashboard-ocpai-3.4-ready
           ports:
             - containerPort: 8080
           readinessProbe:
