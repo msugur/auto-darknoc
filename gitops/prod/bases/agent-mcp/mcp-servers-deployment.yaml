@@ -325,9 +325,11 @@ spec:
       labels:
         app: mcp-servicenow
     spec:
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: server
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-servicenow:latest
+          image: quay.io/msugur/auto-darknoc:mcp-servicenow-1515730
           imagePullPolicy: Always
           ports:
             - containerPort: 8006

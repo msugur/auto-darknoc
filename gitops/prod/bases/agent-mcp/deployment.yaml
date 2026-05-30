@@ -30,9 +30,11 @@ spec:
         app: dark-noc-agent
     spec:
       serviceAccountName: dark-noc-agent
+      imagePullSecrets:
+        - name: quay-pull
       containers:
         - name: agent
-          image: image-registry.openshift-image-registry.svc:5000/dark-noc-hub/dark-noc-agent:latest
+          image: quay.io/msugur/auto-darknoc:agent-1515730
           imagePullPolicy: Always
           env:
             - name: VLLM_URL
