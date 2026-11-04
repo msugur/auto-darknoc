@@ -60,7 +60,7 @@ spec:
               echo "MinIO is ready!"
       containers:
         - name: minio-client
-          image: quay.io/minio/mc:RELEASE.2025-01-17T23-25-50Z
+          image: docker.io/pgsty/mc:RELEASE.2026-10-26T00-00-00Z
           env:
             # mc writes its config under $HOME/.mc; use a writable path for restricted SCC
             - name: HOME

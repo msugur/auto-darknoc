@@ -66,7 +66,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: quay.io/minio/minio:RELEASE.2025-01-20T14-49-07Z
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
           args:
             - server
             - /data
