@@ -100,6 +100,10 @@ data:
       try:
         limit_mi = deployment_memory_limit_mi()
         threshold_key = f"unsafe-limit:{limit_mi}"
+        if limit_mi is not None and limit_mi > 32:
+          # Limit restored to a safe value: re-arm the unsafe-limit trigger so
+          # the next fault is detected (previously it fired once per pod life).
+          seen = {k for k in seen if not k.startswith("unsafe-limit:")}
         if limit_mi is not None and limit_mi <= 32 and threshold_key not in seen:
           seen.add(threshold_key)
           post_event({
