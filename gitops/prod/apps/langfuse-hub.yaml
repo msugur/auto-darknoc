@@ -65,7 +65,7 @@ spec:
           port: 5432
           auth:
             username: langfuse
-            database: langfuseapp
+            database: langfuse   # matches CNPG bootstrap.initdb.database
             existingSecret: langfuse-secrets
             secretKeys:
               userPasswordKey: DATABASE_PASSWORD
