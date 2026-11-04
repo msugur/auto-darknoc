@@ -1,0 +1,43 @@
+# =============================================================
+# OGX Server (OpenShift AI 3.5) — replaces LlamaStackDistribution
+# =============================================================
+# OpenShift AI 3.5 deprecates the llamastackoperator component in favour of
+# OGX (DataScienceCluster spec.components.ogx). OGX serves the Llama Stack
+# compatible APIs (Responses, Chat Completions, Vector IO, Tools).
+#
+# Prerequisite (DataScienceCluster):
+#   llamastackoperator.managementState: Removed
+#   ogx.managementState: Managed
+#
+# The Dark NOC agent calls vLLM directly; this server exposes the same model
+# through the OGX/Llama Stack API surface for the Responses API demo path.
+# Storage uses the OGX default (embedded) — no external Postgres required.
+# =============================================================
+apiVersion: ogx.io/v1beta1
+kind: OGXServer
+metadata:
+  name: dark-noc-ogx
+  namespace: dark-noc-hub
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+    dark-noc/layer: ai
+spec:
+  distribution:
+    name: rh
+  network:
+    port: 8321
+    externalAccess:
+      enabled: true
+  providers:
+    inference:
+      remote:
+        vllm:
+          - id: vllm-llama
+            endpoint: http://llama-32-3b-instruct-predictor.my-first-model.svc.cluster.local:8080/v1
+            maxTokens: 2048
+            refreshModels: true
+  resources:
+    models:
+      - name: llama-32-3b-instruct
+        provider: vllm-llama
+        modelType: llm
