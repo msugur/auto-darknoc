@@ -245,6 +245,12 @@ for _ in $(seq 1 90); do
   sleep 10
 done
 oc wait --for=condition=Established crd/argocds.argoproj.io crd/applications.argoproj.io crd/appprojects.argoproj.io --timeout=300s
+echo "Waiting for openshift-gitops namespace..."
+for _ in $(seq 1 60); do
+  oc get namespace openshift-gitops >/dev/null 2>&1 && break
+  sleep 5
+done
+oc get namespace openshift-gitops >/dev/null
 echo "== Apply Argo CD instance + project =="
 oc apply -k "$ROOT_DIR/gitops/prod/argocd"
 
