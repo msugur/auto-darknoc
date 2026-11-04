@@ -1,0 +1,49 @@
+---
+# Wrapper for the Dark NOC AI-generated remediation path.
+# The agent builds an incident-specific playbook from the model's RCA and passes
+# it as extra vars (generated_playbook_name / generated_playbook_yaml). AAP
+# validates playbook paths against SCM, so this stable wrapper writes the
+# generated playbook to a temp dir and executes it. Kubernetes auth comes from
+# the attached AAP credential (K8S_AUTH_* env), inherited by ansible-playbook.
+- name: Run AI-generated remediation playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    generated_playbook_name: generated-remediation.yaml
+    generated_playbook_yaml: ""
+    incident_id: unknown
+  tasks:
+    - name: Require a generated playbook
+      ansible.builtin.assert:
+        that:
+          - generated_playbook_yaml | length > 0
+        fail_msg: "generated_playbook_yaml extra var is empty"
+
+    - name: Create workspace for generated playbook
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: darknoc
+      register: workdir
+
+    - name: Write generated playbook
+      ansible.builtin.copy:
+        content: "{{ generated_playbook_yaml }}"
+        dest: "{{ workdir.path }}/{{ generated_playbook_name | basename }}"
+        mode: "0600"
+
+    - name: Show generated playbook (audit trail)
+      ansible.builtin.debug:
+        msg: "{{ generated_playbook_yaml.splitlines() }}"
+
+    - name: Execute generated playbook
+      ansible.builtin.command:
+        cmd: >-
+          ansible-playbook -i localhost, -c local
+          {{ workdir.path }}/{{ generated_playbook_name | basename }}
+      register: generated_run
+      changed_when: true
+
+    - name: Generated playbook output
+      ansible.builtin.debug:
+        msg: "{{ generated_run.stdout_lines }}"

@@ -24,10 +24,11 @@ spec:
                 secretKeyRef:
                   name: aap-enterprise-controller-admin-password
                   key: password
+            # Dark NOC playbooks (restart-nginx, lightspeed wrapper) live in this repo
             - name: DEMO_SCM_URL
-              value: "https://github.com/ansible/ansible-tower-samples"
+              value: "https://github.com/msugur/auto-darknoc.git"
             - name: DEMO_SCM_BRANCH
-              value: "master"
+              value: "ocpai35"
             - name: EDGE_API_URL
               valueFrom:
                 secretKeyRef:
@@ -201,7 +202,7 @@ spec:
               edge_cred_id = ensure_edge_credential()
               hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
               restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml")
-              lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "hello_world.yml")
+              lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "playbooks/lightspeed-generate-and-run.yaml")
               associate_credential(restart_id, edge_cred_id)
               associate_credential(lightspeed_id, edge_cred_id)
 
