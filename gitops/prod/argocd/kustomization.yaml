@@ -4,4 +4,3 @@ resources:
   - openshift-gitops-subscription.yaml
   - project.yaml
   - notifications-config.yaml
-  - root-application.yaml

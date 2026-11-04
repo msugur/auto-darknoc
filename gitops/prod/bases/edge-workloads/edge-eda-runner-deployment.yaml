@@ -148,7 +148,7 @@ spec:
       serviceAccountName: edge-eda-runner
       containers:
         - name: runner
-          image: quay.io/openshift/origin-cli:4.21
+          image: quay.io/openshift/origin-cli:4.22
           imagePullPolicy: IfNotPresent
           command: ["python3", "/runner/runner.py"]
           env:

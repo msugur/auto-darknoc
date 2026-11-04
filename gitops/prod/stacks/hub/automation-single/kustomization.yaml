@@ -1,0 +1,21 @@
+# Single-cluster automation: there is no separate edge cluster to import into
+# ACM, so the edge-01 ManagedCluster/KlusterletAddonConfig are dropped (the hub
+# itself appears as local-cluster).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/automation
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: cluster.open-cluster-management.io/v1
+      kind: ManagedCluster
+      metadata:
+        name: edge-01
+  - patch: |-
+      $patch: delete
+      apiVersion: agent.open-cluster-management.io/v1
+      kind: KlusterletAddonConfig
+      metadata:
+        name: edge-01
+        namespace: edge-01

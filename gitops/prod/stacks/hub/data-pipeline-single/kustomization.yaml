@@ -1,0 +1,42 @@
+# Single-cluster data pipeline: one ClusterLogForwarder "instance" carries both
+# the hub LokiStack pipeline and the edge nginx -> Kafka pipeline (the edge
+# data-pipeline app is not deployed in single-cluster mode, otherwise two Argo
+# apps would fight over the same CLF). Kafka is reached in-cluster over the
+# plain internal listener, so no cross-cluster CA secret is required.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/data-pipeline-hub
+patches:
+  - target:
+      group: observability.openshift.io
+      version: v1
+      kind: ClusterLogForwarder
+      name: instance
+      namespace: openshift-logging
+    patch: |-
+      - op: add
+        path: /spec/inputs
+        value:
+          - name: nginx-logs-input
+            type: application
+            application:
+              selector:
+                matchLabels:
+                  app: nginx
+      - op: add
+        path: /spec/outputs/-
+        value:
+          name: hub-kafka
+          type: kafka
+          kafka:
+            url: tcp://dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc:9092
+            topic: nginx-logs
+      - op: add
+        path: /spec/pipelines/-
+        value:
+          name: nginx-to-kafka
+          inputRefs:
+            - nginx-logs-input
+          outputRefs:
+            - hub-kafka

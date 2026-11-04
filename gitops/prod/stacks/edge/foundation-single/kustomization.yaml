@@ -1,0 +1,23 @@
+# Single-cluster edge foundation: the hub foundation already installs the
+# logging operator in openshift-logging, so only namespaces + edge access are
+# applied here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/edge-foundation
+  - edge-operator-sa.yaml
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: cluster-logging-og
+        namespace: openshift-logging
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: cluster-logging
+        namespace: openshift-logging

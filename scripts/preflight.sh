@@ -117,10 +117,12 @@ if [[ -z "${HUB_API_URL:-}" ]]; then
 else
     if login_hub; then
         HUB_VERSION="$(server_version || true)"
-        if [[ "${HUB_VERSION}" == 4.20* || "${HUB_VERSION}" == 4.21* ]]; then
+        if [[ "${HUB_VERSION}" == 4.22* ]]; then
             pass "Hub cluster accessible — OCP version: ${HUB_VERSION}"
+        elif [[ "${HUB_VERSION}" == 4.20* || "${HUB_VERSION}" == 4.21* ]]; then
+            warn "Hub cluster is OCP ${HUB_VERSION} — ocpai35 is validated on 4.22.x (operator channels may differ)"
         else
-            fail "Hub cluster is OCP ${HUB_VERSION} — expected 4.20.x or 4.21.x"
+            fail "Hub cluster is OCP ${HUB_VERSION} — expected 4.22.x"
         fi
     else
         fail "Cannot connect to hub cluster at ${HUB_API_URL}"
@@ -145,7 +147,7 @@ GPU_NODES=$(oc get nodes -l nvidia.com/gpu.present=true --no-headers 2>/dev/null
 if [[ "${GPU_NODES}" -ge 1 ]]; then
     pass "GPU node found (nvidia.com/gpu.present=true) — count: ${GPU_NODES}"
 else
-    warn "No GPU nodes found yet — will need to add g5.2xlarge MachineSet in Phase 01"
+    warn "No GPU nodes found yet — will need a GPU MachineSet (g5/g6) in Phase 01"
 fi
 
 # ============================================================
@@ -189,7 +191,16 @@ fi
 # CHECK 6: Conflicting operators
 # ============================================================
 header "CHECK 6: Existing Operators (conflict check)"
-CONFLICT_OPERATORS="rhods|advanced-cluster-management|amq-streams|ansible-automation-platform|aap|loki|multicluster"
+CONFLICT_OPERATORS="advanced-cluster-management|amq-streams|ansible-automation-platform|aap|loki|multicluster"
+RHOAI_CSV=$(oc get csv -A --no-headers 2>/dev/null | awk '/rhods-operator/ {print $2; exit}')
+if [[ -n "${RHOAI_CSV}" ]]; then
+    if [[ "${RHOAI_CSV}" == rhods-operator.3.* ]]; then
+        pass "OpenShift AI already installed: ${RHOAI_CSV}"
+        [[ "${SINGLE_CLUSTER:-false}" == "true" ]] || warn "Pre-installed OpenShift AI detected — use --single-cluster (apps-single) to avoid duplicate OperatorGroups"
+    else
+        fail "OpenShift AI ${RHOAI_CSV} is 2.x — ocpai35 requires 3.x (fresh install)"
+    fi
+fi
 EXISTING=$(oc get subscriptions.operators.coreos.com -A --no-headers 2>/dev/null | grep -Ei "${CONFLICT_OPERATORS}" || true)
 
 if [[ -z "${EXISTING}" ]]; then
@@ -222,16 +233,18 @@ fi
 # CHECK 8: Edge cluster access
 # ============================================================
 header "CHECK 8: Edge Cluster Access"
-if [[ -z "${EDGE_API_URL:-}" ]]; then
+if [[ "${SINGLE_CLUSTER:-false}" == "true" ]]; then
+    pass "Single-cluster mode — edge workloads run on the hub cluster"
+elif [[ -z "${EDGE_API_URL:-}" ]]; then
     warn "EDGE_API_URL not set — skipping edge cluster checks"
     warn "Set edge credentials in configs/edge/env.sh and re-run"
 else
     if login_edge; then
         EDGE_VERSION="$(server_version || true)"
-        if [[ "${EDGE_VERSION}" == 4.20* || "${EDGE_VERSION}" == 4.21* ]]; then
+        if [[ "${EDGE_VERSION}" == 4.20* || "${EDGE_VERSION}" == 4.21* || "${EDGE_VERSION}" == 4.22* ]]; then
             pass "Edge cluster accessible — OCP version: ${EDGE_VERSION}"
         else
-            fail "Edge cluster is OCP ${EDGE_VERSION} — expected 4.20.x or 4.21.x"
+            fail "Edge cluster is OCP ${EDGE_VERSION} — expected 4.20.x-4.22.x"
         fi
     else
         fail "Cannot connect to edge cluster at ${EDGE_API_URL}"

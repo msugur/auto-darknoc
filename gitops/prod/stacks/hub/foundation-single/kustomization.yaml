@@ -1,0 +1,100 @@
+# Single-cluster foundation for clusters where OpenShift AI is pre-installed
+# (e.g. RHDP "OpenShift AI" catalog items).
+#
+# Skipped versus stacks/hub/foundation:
+#   - GPU Operator, NFD, OpenShift AI: already installed and owned by the
+#     environment. Re-applying them adds a second OperatorGroup per namespace
+#     (OLM "TooManyOperatorGroups") and can pin an older channel.
+#   - Service Mesh 2.x / Kiali: not required by OpenShift AI 3.x.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../bases/foundation
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: nvidia-gpu-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: gpu-operator-group
+        namespace: nvidia-gpu-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: gpu-operator-certified
+        namespace: nvidia-gpu-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: nvidia.com/v1
+      kind: ClusterPolicy
+      metadata:
+        name: gpu-cluster-policy
+        namespace: nvidia-gpu-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: openshift-nfd
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: nfd-operator-group
+        namespace: openshift-nfd
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: nfd
+        namespace: openshift-nfd
+  - patch: |-
+      $patch: delete
+      apiVersion: nfd.openshift.io/v1
+      kind: NodeFeatureDiscovery
+      metadata:
+        name: nfd-instance
+        namespace: openshift-nfd
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: redhat-ods-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: rhods-operator
+        namespace: redhat-ods-operator
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: servicemeshoperator
+        namespace: openshift-operators
+  - patch: |-
+      $patch: delete
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: kiali-ossm
+        namespace: openshift-operators
+  - patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: istio-system

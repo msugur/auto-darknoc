@@ -73,3 +73,16 @@ Then sync `ui-hub` in Argo CD.
 - No manual placeholder editing is required.
 - No manual secret template editing is required.
 - Keep `*.real.yaml` out of Git.
+
+## Single-cluster mode (OpenShift AI already installed)
+
+When one OpenShift 4.22 cluster with OpenShift AI 3.x hosts both hub and edge
+workloads, only hub values (and Quay credentials if images are private) are needed:
+
+```bash
+source configs/hub/env.sh
+./scripts/one-click-gitops.sh --single-cluster --create-quay-pull
+```
+
+This applies `argocd/root-application-single.yaml` → `gitops/prod/apps-single`.
+See the README "Single-Cluster Quick Start" for what differs from the two-cluster graph.

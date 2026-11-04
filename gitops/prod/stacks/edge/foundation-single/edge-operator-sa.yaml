@@ -1,0 +1,52 @@
+# Long-lived identity used by AAP (edge-01-k8s credential) and mcp-openshift
+# (edge-01-kubeconfig) to act on the "edge" workloads when hub and edge share
+# one cluster. Scoped to dark-noc-edge write + cluster read.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dark-noc-edge-operator
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dark-noc-edge-operator-token
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+  annotations:
+    kubernetes.io/service-account.name: dark-noc-edge-operator
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dark-noc-edge-operator-edit
+  namespace: dark-noc-edge
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+subjects:
+  - kind: ServiceAccount
+    name: dark-noc-edge-operator
+    namespace: dark-noc-edge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dark-noc-edge-operator-view
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+subjects:
+  - kind: ServiceAccount
+    name: dark-noc-edge-operator
+    namespace: dark-noc-edge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-reader

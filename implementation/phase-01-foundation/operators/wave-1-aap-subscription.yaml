@@ -62,7 +62,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable-2.5
+  channel: stable-2.6
   installPlanApproval: Automatic
   name: ansible-automation-platform-operator
   source: redhat-operators

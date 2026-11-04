@@ -57,7 +57,7 @@ metadata:
     app.kubernetes.io/part-of: dark-noc
     dark-noc/cluster: edge
 spec:
-  channel: stable-6.4
+  channel: stable-6.6
   installPlanApproval: Automatic
   name: cluster-logging
   source: redhat-operators

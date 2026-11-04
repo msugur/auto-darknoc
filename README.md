@@ -2,11 +2,11 @@
 
 > AI-Driven Self-Healing Telco Edge Operations powered by Red Hat OpenShift AI
 
-[![OpenShift](https://img.shields.io/badge/OpenShift-4.21-red)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
-[![RHOAI](https://img.shields.io/badge/OpenShift%20AI-3.4-red)](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai)
-[![Kafka](https://img.shields.io/badge/Streams%20for%20Kafka-3.1-orange)](https://www.redhat.com/en/resources/amq-streams-datasheet)
-[![AAP](https://img.shields.io/badge/AAP-2.5-red)](https://www.redhat.com/en/technologies/management/ansible)
-[![ACM](https://img.shields.io/badge/ACM-2.15-red)](https://www.redhat.com/en/technologies/management/advanced-cluster-management)
+[![OpenShift](https://img.shields.io/badge/OpenShift-4.22-red)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
+[![RHOAI](https://img.shields.io/badge/OpenShift%20AI-3.5-red)](https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai)
+[![Kafka](https://img.shields.io/badge/Streams%20for%20Kafka-3.2-orange)](https://www.redhat.com/en/resources/amq-streams-datasheet)
+[![AAP](https://img.shields.io/badge/AAP-2.6-red)](https://www.redhat.com/en/technologies/management/ansible)
+[![ACM](https://img.shields.io/badge/ACM-2.17-red)](https://www.redhat.com/en/technologies/management/advanced-cluster-management)
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.0-blue)](https://langchain-ai.github.io/langgraph/)
 [![Granite](https://img.shields.io/badge/Granite-4.0-purple)](https://www.ibm.com/granite)
 [![Langfuse](https://img.shields.io/badge/Langfuse-3.x-green)](https://langfuse.com)
@@ -35,14 +35,14 @@ The **Autonomous Dark NOC** is a fully AI-driven network operations solution for
 ### Key Capabilities
 | Capability | Technology | Result |
 |-----------|-----------|--------|
-| Real-time log streaming | Red Hat Streams for Kafka 3.1 | < 1s edge → hub |
-| AI log analysis | IBM Granite 4.0 + OpenShift AI 3.4 | < 5s root cause analysis |
+| Real-time log streaming | Red Hat Streams for Kafka 3.2 | < 1s edge → hub |
+| AI log analysis | IBM Granite 4.0 / Llama 3.2 + OpenShift AI 3.5 | < 5s root cause analysis |
 | Governed model access | Models-as-a-Service | API keys, subscriptions, quotas, showback |
 | Model lifecycle | MLflow + Model Registry + AutoML/AutoRAG | Train, evaluate, promote better models |
 | AI safety | NeMo Guardrails + TrustyAI evals | Guarded remediation before tool execution |
 | RAG-grounded decisions | Llama Stack + pgvector | Runbook-based remediation |
-| Automated remediation | AAP 2.5 + EDA | < 30s MTTR for routine faults |
-| Multi-cluster management | ACM 2.15 | Hub controls edge fleet |
+| Automated remediation | AAP 2.6 + EDA | < 30s MTTR for routine faults |
+| Multi-cluster management | ACM 2.17 | Hub controls edge fleet |
 | Full observability | Langfuse 3.x | Every AI decision traced |
 | Human-in-the-loop | LangGraph 1.0 | Approval gate for P1 incidents |
 | Conversational NOC | Chatbot + LangGraph | Natural language cluster ops |
@@ -54,21 +54,21 @@ The **Autonomous Dark NOC** is a fully AI-driven network operations solution for
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  HUB SNO CLUSTER (OCP 4.21)  —  AWS us-east-1                  │
+│  HUB SNO CLUSTER (OCP 4.22)  —  AWS us-east-1                  │
 │  m5.4xlarge + g5.2xlarge (GPU: 1× NVIDIA A10G)                 │
 │                                                                  │
-│  OpenShift AI 3.4 · LlamaStack · vLLM · Granite 4.0           │
-│  Kafka 3.1 · AAP 2.5 + EDA · ACM 2.15 Hub                     │
+│  OpenShift AI 3.5 · LlamaStack · vLLM · Granite 4.0           │
+│  Kafka 3.2 · AAP 2.6 + EDA · ACM 2.17 Hub                     │
 │  Langfuse 3.x · pgvector · MinIO · FastMCP 3.0.2               │
 │  LangGraph 1.0 Agent · React Dashboard · Chatbot UI             │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ Kafka TLS + ACM + AAP API
 ┌──────────────────────────▼──────────────────────────────────────┐
-│  EDGE SNO CLUSTER (OCP 4.21)  —  AWS us-east-1                 │
+│  EDGE SNO CLUSTER (OCP 4.22)  —  AWS us-east-1                 │
 │  m5.2xlarge                                                     │
 │                                                                  │
 │  nginx (monitored workload) · Log Generator                     │
-│  OpenShift Logging 6.4 (Vector → Hub Kafka)                    │
+│  OpenShift Logging 6.6 (Vector → Hub Kafka)                    │
 │  ACM Spoke · Argo CD Pull Agent · AAP Execution Environment     │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -113,6 +113,32 @@ oc -n openshift-gitops get applications.argoproj.io
 
 Authoritative one-click guide:
 - [`gitops/prod/docs/ONE_CLICK_DEPLOY.md`](gitops/prod/docs/ONE_CLICK_DEPLOY.md)
+
+## Single-Cluster Quick Start (OpenShift AI pre-installed)
+
+For environments where one OpenShift 4.22 cluster already runs OpenShift AI 3.x
+(for example the RHDP "OpenShift AI" catalog item), hub and edge workloads can
+share the cluster:
+
+```bash
+cp configs/hub/env.sh.example configs/hub/env.sh   # set HUB_* + QUAY_* only
+source configs/hub/env.sh
+./scripts/one-click-gitops.sh --single-cluster --create-quay-pull
+oc -n openshift-gitops get applications.argoproj.io
+```
+
+`--single-cluster` bootstraps `gitops/prod/apps-single`, which:
+- skips GPU Operator, NFD, OpenShift AI and Service Mesh subscriptions (already
+  present; re-applying them causes duplicate OperatorGroups),
+- deploys edge apps to `in-cluster` and merges edge nginx → Kafka forwarding into
+  the hub `ClusterLogForwarder`,
+- omits the `edge-01` ACM ManagedCluster,
+- creates a scoped `dark-noc-edge-operator` ServiceAccount token for AAP and
+  `mcp-openshift` instead of a short-lived login token.
+
+The agent binds to an existing InferenceService via
+`gitops/prod/stacks/hub/ai-core/model-binding-configmap.yaml` (default:
+`my-first-model/llama-32-3b-instruct`).
 
 ## Deployment Order (Advanced/Manual)
 
@@ -225,13 +251,13 @@ Runbooks used by the RAG seed pipeline are under:
 
 | Product | Version | Role |
 |---------|---------|------|
-| OpenShift Container Platform | 4.20/4.21 | Container runtime (both clusters) |
-| Red Hat OpenShift AI | 3.4 | MLOps platform, model serving, MaaS, MLflow, AutoML/AutoRAG |
-| Red Hat ACM | 2.15 | Multi-cluster management |
-| Red Hat Streams for Apache Kafka | 3.1 | Event streaming (KRaft, no ZooKeeper) |
-| Red Hat Ansible Automation Platform | 2.5 | Automated remediation |
-| Event-Driven Ansible (EDA) | 2.5 | Kafka-triggered automation |
-| OpenShift Logging | 6.4 | Log collection + LokiStack storage |
+| OpenShift Container Platform | 4.22 | Container runtime (both clusters) |
+| Red Hat OpenShift AI | 3.5 | MLOps platform, model serving, MaaS, MLflow, AutoML/AutoRAG |
+| Red Hat ACM | 2.17 | Multi-cluster management |
+| Red Hat Streams for Apache Kafka | 3.2 | Event streaming (KRaft, no ZooKeeper) |
+| Red Hat Ansible Automation Platform | 2.6 | Automated remediation |
+| Event-Driven Ansible (EDA) | 2.6 | Kafka-triggered automation |
+| OpenShift Logging | 6.6 | Log collection + LokiStack storage |
 
 ---
 

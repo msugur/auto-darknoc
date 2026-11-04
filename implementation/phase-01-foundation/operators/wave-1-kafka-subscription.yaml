@@ -43,7 +43,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable
+  channel: amq-streams-3.x
   installPlanApproval: Automatic
   name: amq-streams
   source: redhat-operators

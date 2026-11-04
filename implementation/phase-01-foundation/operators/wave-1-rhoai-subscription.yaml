@@ -55,7 +55,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable           # stable channel tracks 3.x releases
+  channel: stable-3.x       # NOTE: plain "stable" resolves to 2.25.x - do not use
   installPlanApproval: Automatic
   name: rhods-operator
   source: redhat-operators

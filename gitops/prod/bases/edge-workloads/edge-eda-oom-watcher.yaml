@@ -139,7 +139,7 @@ spec:
       serviceAccountName: edge-eda-oom-watcher
       containers:
         - name: watcher
-          image: quay.io/openshift/origin-cli:4.21
+          image: quay.io/openshift/origin-cli:4.22
           imagePullPolicy: IfNotPresent
           command: ["python3", "/watcher/watcher.py"]
           env:

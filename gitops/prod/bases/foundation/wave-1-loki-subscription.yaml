@@ -47,7 +47,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: dark-noc
 spec:
-  channel: stable-6.4
+  channel: stable-6.6
   installPlanApproval: Automatic
   name: loki-operator
   source: redhat-operators

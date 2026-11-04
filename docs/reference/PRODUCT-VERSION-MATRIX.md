@@ -1,22 +1,22 @@
 # Dark NOC Product & Tool Version Matrix
 
-Last updated: 2026-05-29
+Last updated: 2026-11-04 (branch `ocpai35`)
 
 ## 1) Red Hat Platform Stack
 
 | Product | Version | Where Used |
 |---|---:|---|
-| OpenShift Container Platform | 4.20.x / 4.21.x | Hub and Edge cluster base |
-| Red Hat OpenShift AI Operator | 3.4.x | Hub AI core (`DataScienceCluster`, model serving, MaaS, MLflow, AutoML/AutoRAG demos) |
-| Red Hat Advanced Cluster Management (ACM) | 2.15.1 | Hub/Edge multicluster lifecycle and policy |
-| Red Hat Ansible Automation Platform (AAP) | 2.5.x | Hub controller, EDA, automation workflows |
-| Red Hat Streams for Apache Kafka (AMQ Streams) | 3.1.0 | Kafka operator on Hub |
+| OpenShift Container Platform | 4.22.x | Hub and Edge cluster base |
+| Red Hat OpenShift AI Operator | 3.5.x (`stable-3.x`) | Hub AI core (`DataScienceCluster`, model serving, MaaS, MLflow, AutoML/AutoRAG demos) |
+| Red Hat Advanced Cluster Management (ACM) | 2.17.x (`release-2.17`) | Hub/Edge multicluster lifecycle and policy |
+| Red Hat Ansible Automation Platform (AAP) | 2.6.x (`stable-2.6`) | Hub controller, EDA, automation workflows |
+| Red Hat Streams for Apache Kafka (AMQ Streams) | 3.2.x (`amq-streams-3.x`) | Kafka operator on Hub |
 | Apache Kafka (KRaft mode) | 4.2.0 (`metadataVersion: 4.2`) | Event backbone (`nginx-logs`, remediation, audit topics) |
-| Red Hat OpenShift Logging | 6.4.2 | Hub + Edge logging pipeline |
-| Red Hat Loki Operator | 6.4.2 | Hub LokiStack deployment |
-| OpenShift Service Mesh | 3.1.0 | Hub service connectivity/security layer |
-| CloudNativePG Operator | 1.28.1 | PostgreSQL clusters for Langfuse + pgvector |
-| NVIDIA GPU Operator | v25.3 channel | GPU enablement on Hub |
+| Red Hat OpenShift Logging | 6.6.x (`stable-6.6`) | Hub + Edge logging pipeline |
+| Red Hat Loki Operator | 6.6.x (`stable-6.6`) | Hub LokiStack deployment |
+| OpenShift Service Mesh | 2.x subscription (two-cluster path only) | Not required by OpenShift AI 3.x; skipped in single-cluster mode |
+| CloudNativePG Operator | 1.30.x (`stable-v1`) | PostgreSQL clusters for Langfuse + pgvector |
+| NVIDIA GPU Operator | v26.7 channel | GPU enablement on Hub |
 | cert-manager | stable-v1 channel | TLS cert lifecycle automation |
 
 ## 2) AI / Agentic Stack
@@ -25,11 +25,11 @@ Last updated: 2026-05-29
 |---|---:|---|
 | Granite | 4.0 H-Tiny | Incident reasoning/RCA model |
 | vLLM | 0.15.1 | Inference serving layer |
-| LlamaStack runtime | 3.4 managed stream | AI runtime/orchestration layer; Responses API demo path |
+| LlamaStack runtime | 3.5 managed stream | AI runtime/orchestration layer; Responses API demo path |
 | LangGraph | 1.0.0 | Autonomous NOC workflow engine |
 | FastMCP | 3.0.2 | MCP servers for tool integration |
 | pgvector | 0.8.1 | RAG vector index in Postgres |
-| MLflow Operator | 3.4 managed component | Experiment tracking and model lifecycle metadata |
+| MLflow Operator | 3.5 managed component | Experiment tracking and model lifecycle metadata |
 | NeMo Guardrails | 3.4 supported feature | Guardrail checks before remediation/tool execution |
 | AutoML | 3.4 Technology Preview | Structured incident severity/MTTR model training demo |
 | AutoRAG | 3.4 Technology Preview | Runbook RAG optimization demo |

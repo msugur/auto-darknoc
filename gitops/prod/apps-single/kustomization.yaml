@@ -1,0 +1,49 @@
+# Single-cluster app graph: hub and "edge" workloads share one OpenShift cluster
+# that already has OpenShift AI installed. Reuses gitops/prod/apps and patches
+# only what differs. Bootstrapped by argocd/root-application-single.yaml
+# (scripts/one-click-gitops.sh --single-cluster).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../apps
+patches:
+  # Edge log forwarding is merged into the hub ClusterLogForwarder.
+  - patch: |-
+      $patch: delete
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: data-pipeline-edge
+        namespace: openshift-gitops
+  - target: {kind: Application, name: foundation-hub}
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: gitops/prod/stacks/hub/foundation-single
+  - target: {kind: Application, name: data-pipeline-hub}
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: gitops/prod/stacks/hub/data-pipeline-single
+  - target: {kind: Application, name: automation-hub}
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: gitops/prod/stacks/hub/automation-single
+  - target: {kind: Application, name: foundation-edge}
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: gitops/prod/stacks/edge/foundation-single
+      - op: replace
+        path: /spec/destination
+        value:
+          name: in-cluster
+          namespace: dark-noc-edge
+  - target: {kind: Application, name: edge-workloads}
+    patch: |-
+      - op: replace
+        path: /spec/destination
+        value:
+          name: in-cluster
+          namespace: dark-noc-edge
