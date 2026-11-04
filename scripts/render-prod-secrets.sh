@@ -120,7 +120,7 @@ AAP_LIGHTSPEED_URL="${AAP_LIGHTSPEED_URL:-${AAP_URL}/#/templates/job_template/${
 GRAFANA_USERNAME="${GRAFANA_USERNAME:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-redhat}"
 LANGFUSE_USERNAME="${LANGFUSE_USERNAME:-admin}"
-LANGFUSE_PASSWORD="${LANGFUSE_PASSWORD:-redhat}"
+LANGFUSE_PASSWORD="${LANGFUSE_PASSWORD:-redhat-darknoc}"   # Langfuse requires >= 8 chars
 KAFKA_UI_URL="${KAFKA_UI_URL:-https://kafka-ui-dark-noc-kafka.${HUB_APPS_DOMAIN}}"
 KAFKA_UI_USERNAME="${KAFKA_UI_USERNAME:-admin}"
 KAFKA_UI_PASSWORD="${KAFKA_UI_PASSWORD:-redhat}"
@@ -259,6 +259,7 @@ replace "$SECRETS_DIR/data-runtime.real.yaml" "REPLACE_WITH_PGVECTOR_URL" "$PGVE
 replace "$SECRETS_DIR/data-runtime.real.yaml" "REPLACE_WITH_PG_CHECKPOINT_URL" "$PG_CHECKPOINT_URL"
 replace "$SECRETS_DIR/data-runtime.real.yaml" "REPLACE_WITH_LANGFUSE_PUBLIC_KEY" "$LANGFUSE_PUBLIC_KEY"
 replace "$SECRETS_DIR/data-runtime.real.yaml" "REPLACE_WITH_LANGFUSE_SECRET_KEY" "$LANGFUSE_SECRET_KEY"
+replace "$SECRETS_DIR/data-runtime.real.yaml" "REPLACE_WITH_LANGFUSE_PASSWORD" "$LANGFUSE_PASSWORD"
 
 render "$AUTOMATION_DIR/aap-edge-access.template.yaml" "$AUTOMATION_DIR/aap-edge-access.real.yaml"
 replace "$AUTOMATION_DIR/aap-edge-access.real.yaml" "REPLACE_WITH_EDGE_API_URL" "${EDGE_API_URL:-}"

@@ -1,0 +1,98 @@
+# Seeds NOC runbooks (type=runbook) into pgvector for the agent's RAG step.
+# The agent queries metadata.type='runbook'; without this job only product
+# documentation is present and runbook retrieval returns 0 chunks.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rag-runbooks-seed
+  namespace: dark-noc-rag
+  labels:
+    app: rag-runbooks-seed
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: rag-runbooks-seed
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: runbooks-seeder
+          image: python:3.12-slim
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGVECTOR_HOST
+              value: pgvector-postgres-rw.dark-noc-rag.svc
+            - name: PGVECTOR_PORT
+              value: "5432"
+            - name: PGVECTOR_DB
+              value: noc_rag
+            - name: PGVECTOR_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pgvector-superuser
+                  key: username
+            - name: PGVECTOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgvector-superuser
+                  key: password
+            - name: RUNBOOKS_DIR
+              value: /runbooks/
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: PIP_DISABLE_PIP_VERSION_CHECK
+              value: "1"
+            - name: PYTHONPATH
+              value: /tmp/pylibs
+            - name: HF_HOME
+              value: /tmp/hf
+          command:
+            - /bin/bash
+            - -lc
+            - |
+              set -euo pipefail
+              python - <<'PY'
+              import os, socket, time
+
+              host = os.environ["PGVECTOR_HOST"]
+              port = int(os.environ.get("PGVECTOR_PORT", "5432"))
+              deadline = time.time() + 300
+              while time.time() < deadline:
+                  try:
+                      with socket.create_connection((host, port), timeout=5):
+                          print(f"pgvector is reachable at {host}:{port}")
+                          break
+                  except OSError as exc:
+                      print(f"waiting for pgvector at {host}:{port}: {exc}")
+                      time.sleep(10)
+              else:
+                  raise SystemExit(f"pgvector did not become reachable at {host}:{port}")
+              PY
+              python -m pip install --no-cache-dir --target /tmp/pylibs \
+                psycopg2-binary==2.9.10 \
+                sentence-transformers==5.1.0 \
+                --extra-index-url https://download.pytorch.org/whl/cpu \
+                torch==2.8.0+cpu
+              python /scripts/seed-knowledge-base.py
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: seed-script
+              mountPath: /scripts
+            - name: runbooks
+              mountPath: /runbooks
+      volumes:
+        - name: seed-script
+          configMap:
+            name: rag-runbooks-seed-script
+            defaultMode: 0755
+        - name: docs-config
+          configMap:
+            name: rag-docs-sources

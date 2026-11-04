@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - ogx-server.yaml
   - rag-docs-seed-job.yaml
+  - rag-runbooks-seed-job.yaml
   - ocpai-34-demo-enablement.yaml
 configMapGenerator:
   # Base config of the rh OGX distribution (extracted from
@@ -24,5 +25,22 @@ configMapGenerator:
     namespace: dark-noc-rag
     files:
       - documentation-sources.yaml
+  - name: rag-runbooks-seed-script
+    namespace: dark-noc-rag
+    files:
+      - seed-knowledge-base.py
+  - name: rag-runbooks
+    namespace: dark-noc-rag
+    files:
+      - runbooks/aap-job-failure.md
+      - runbooks/certificate-expired.md
+      - runbooks/dns-failure.md
+      - runbooks/kafka-consumer-lag.md
+      - runbooks/network-timeout.md
+      - runbooks/nginx-config-error.md
+      - runbooks/nginx-crashloop.md
+      - runbooks/nginx-oomkilled.md
+      - runbooks/postgres-connection-pool.md
+      - runbooks/storage-full.md
 generatorOptions:
   disableNameSuffixHash: true

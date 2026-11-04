@@ -66,6 +66,12 @@ MCP_AAP_URL = os.getenv("MCP_AAP_URL", "http://mcp-aap.dark-noc-mcp.svc:8004/mcp
 MCP_SLACK_URL = os.getenv("MCP_SLACK_URL", "http://mcp-slack.dark-noc-mcp.svc:8005/mcp")
 MCP_SNOW_URL = os.getenv("MCP_SNOW_URL", "http://mcp-servicenow.dark-noc-mcp.svc:8006/mcp")
 AAP_LIGHTSPEED_TEMPLATE = os.getenv("AAP_LIGHTSPEED_TEMPLATE", "lightspeed-generate-and-run")
+# ServiceNow assignment group (sys_id) for field dispatch when remote remediation
+# fails. Default is the out-of-box "Field Services" group on ServiceNow PDIs.
+FIELD_SERVICE_GROUP = os.getenv("FIELD_SERVICE_GROUP", "74ad1ff3c611227d01d25feac2af603f")
+# Demo scenarios that always take the automated remediation path, so the demo
+# does not depend on how a small model classifies the incident.
+REMEDIATE_SCENARIOS = {"oom", "crashloop", "field"}
 
 # ─────────────────────────────────────────────
 # LLM Client (vLLM OpenAI-compatible API)
@@ -351,6 +357,8 @@ Provide structured root cause analysis as JSON."""
     scenario = str(log.get("raw", {}).get("labels", {}).get("dark_noc_scenario", "")).strip().lower()
     if scenario == "lightspeed":
         next_action = "lightspeed"
+    elif scenario in REMEDIATE_SCENARIOS:
+        next_action = "remediate"
     else:
         next_action = "escalate" if rca["escalate_to_human"] else "remediate"
 
@@ -518,16 +526,23 @@ async def node_remediate(state: IncidentState) -> dict:
     failure_type_norm = str(failure_type).strip().lower()
     message_norm = str(log.get("message", "")).lower()
 
+    labels = log.get("raw", {}).get("labels", {}) or {}
+    scenario = str(labels.get("dark_noc_scenario", "")).strip().lower()
+    target_deployment = str(labels.get("dark_noc_target_deployment", "nginx")).strip() or "nginx"
     restart_classes = {
         "oomkilled",
         "crashloopbackoff",
         "resource exhaustion",
         "resource unavailability",
+        "resourceconstraint",
+        "resource constraint",
+        "resource_constraint",
     }
     should_restart = (
         failure_type_norm in restart_classes
         or "oomkilled" in message_norm
         or "crashloop" in message_norm
+        or scenario in REMEDIATE_SCENARIOS
     )
 
     # Route to appropriate remediation based on failure type
@@ -539,7 +554,7 @@ async def node_remediate(state: IncidentState) -> dict:
                 "job_template_name": "restart-nginx",
                 "extra_vars": {
                     "namespace": log["namespace"],
-                    "deployment": "nginx",
+                    "deployment": target_deployment,
                     "edge_cluster": log["edge_site_id"],
                 }
             }
@@ -557,20 +572,33 @@ async def node_remediate(state: IncidentState) -> dict:
                     break
 
             result.update({
-                "action_taken": f"Triggered AAP job: restart-nginx for {log['namespace']}/{log.get('pod_name','')}",
+                "action_taken": f"Triggered AAP job: restart-nginx for {log['namespace']}/{target_deployment}",
                 "tool_used": "mcp-aap",
                 "success": status.get("status") == "successful",
                 "job_id": str(job_id),
                 "output_summary": f"Job {job_id}: {status.get('status')}",
             })
+            if not result["success"]:
+                restart = await call_mcp_tool(
+                    MCP_OPENSHIFT_URL, "rollout_restart",
+                    {"deployment": target_deployment, "namespace": log["namespace"]}
+                )
+                if restart.get("success"):
+                    result.update({
+                        "action_taken": result["action_taken"] + "; AAP job failed, fallback rollout restart succeeded",
+                        "tool_used": "mcp-aap+mcp-openshift",
+                        "success": True,
+                    })
+                else:
+                    result["output_summary"] += f"; fallback rollout restart failed: {restart.get('message') or restart.get('error', 'unknown')}"
         else:
             # Fallback: direct restart via OpenShift MCP
             restart = await call_mcp_tool(
                 MCP_OPENSHIFT_URL, "rollout_restart",
-                {"deployment": "nginx", "namespace": log["namespace"]}
+                {"deployment": target_deployment, "namespace": log["namespace"]}
             )
             result.update({
-                "action_taken": "Triggered nginx rollout restart via OpenShift API",
+                "action_taken": f"AAP launch failed; tried {target_deployment} rollout restart via OpenShift API",
                 "tool_used": "mcp-openshift",
                 "success": restart.get("success", False),
                 "output_summary": restart.get("message", ""),
@@ -637,6 +665,48 @@ async def node_escalate(state: IncidentState) -> dict:
     }
 
 
+async def node_field_service(state: IncidentState) -> dict:
+    """
+    Last resort: every automated path (AAP playbook, fallback restart) failed.
+    Raise a high-priority ServiceNow ticket assigned to Field Services so an
+    engineer is dispatched to the edge site, and alert Slack.
+    """
+    rca = state["rca"]
+    log = state["log_event"]
+    rem = state.get("remediation_result") or {}
+    logger.info(f"[FIELD] Automated remediation failed; dispatching field service for {log['edge_site_id']}")
+    snow_result = await call_mcp_tool(
+        MCP_SNOW_URL, "create_incident",
+        {
+            "short_description": f"[Dark NOC][FIELD DISPATCH] {rca['failure_type']} on {log['edge_site_id']} - remote remediation failed",
+            "description": (
+                f"All automated remediation attempts failed; on-site field engineer required.\n\n"
+                f"Edge site: {log['edge_site_id']}\nNamespace: {log['namespace']}\nPod: {log.get('pod_name', '')}\n\n"
+                f"AI root cause ({rca['confidence']:.0%} confidence): {rca['summary']}\n\n"
+                f"Automated actions attempted:\n- {rem.get('action_taken', 'none')}\n- Result: {rem.get('output_summary', 'failed')}\n\n"
+                f"Recommended actions:\n" + "\n".join(f"- {a}" for a in rca.get("recommended_actions", [])) +
+                f"\n\nLangfuse Trace: {state.get('langfuse_trace_id', 'N/A')}"
+            ),
+            "priority": 2,
+            "assignment_group": FIELD_SERVICE_GROUP,
+            "category": "Hardware",
+            "subcategory": "Edge Site",
+        }
+    )
+    ticket_number = snow_result.get("ticket_number", "INC-UNKNOWN")
+    await call_mcp_tool(
+        MCP_SLACK_URL, "send_incident_ticket",
+        {
+            "ticket_number": ticket_number,
+            "title": f"FIELD DISPATCH: {rca['failure_type']} on {log['edge_site_id']}",
+            "description": f"Remote remediation failed ({rem.get('output_summary', 'failed')}). Field Services engaged.",
+            "priority": "2",
+        }
+    )
+    logger.info(f"[FIELD] Field service ticket {ticket_number} raised")
+    return {"servicenow_ticket": ticket_number, "next_action": "notify"}
+
+
 async def node_notify(state: IncidentState) -> dict:
     """Send Slack notification with remediation result."""
     rca = state["rca"]
@@ -644,6 +714,28 @@ async def node_notify(state: IncidentState) -> dict:
     rem = state.get("remediation_result") or {}
 
     result_str = "success" if rem.get("success") else "failed"
+    ticket = state.get("servicenow_ticket", "")
+    # Record successful automated remediations in ServiceNow too (auto-resolved)
+    if rem.get("success") and not state.get("servicenow_ticket"):
+        snow = await call_mcp_tool(
+            MCP_SNOW_URL, "create_incident",
+            {
+                "short_description": f"[Dark NOC][AUTO-RESOLVED] {rca['failure_type']} on {log['edge_site_id']}",
+                "description": (
+                    f"Detected and remediated automatically by Dark NOC.\n\n"
+                    f"AI root cause ({rca['confidence']:.0%} confidence): {rca['summary']}\n"
+                    f"Action: {rem.get('action_taken', '')}\nResult: {rem.get('output_summary', '')}\n"
+                    f"Langfuse Trace: {state.get('langfuse_trace_id', 'N/A')}"
+                ),
+                "priority": 4,
+            }
+        )
+        if snow.get("ticket_number"):
+            ticket = snow["ticket_number"]
+            await call_mcp_tool(
+                MCP_SNOW_URL, "update_incident",
+                {"ticket_number": snow["ticket_number"], "work_notes": "Auto-remediated by Dark NOC; no human action required.", "state": "resolved"}
+            )
 
     # Send to Slack
     if not state.get("slack_thread_ts"):
@@ -676,6 +768,7 @@ async def node_notify(state: IncidentState) -> dict:
 
     return {
         "slack_thread_ts": thread_ts,
+        "servicenow_ticket": ticket,
         "next_action": "audit",
     }
 
@@ -727,8 +820,9 @@ def route_after_analyze(state: IncidentState) -> str:
 
 
 def route_after_remediate(state: IncidentState) -> str:
-    """Router: after remediation, always notify."""
-    return "notify"
+    """Router: successful remediation -> notify; all automated fixes failed -> field dispatch."""
+    rem = state.get("remediation_result") or {}
+    return "notify" if rem.get("success") else "field_service"
 
 
 # ─────────────────────────────────────────────
@@ -743,6 +837,7 @@ def build_agent_graph() -> StateGraph:
     workflow.add_node("lightspeed", node_lightspeed)
     workflow.add_node("remediate", node_remediate)
     workflow.add_node("escalate", node_escalate)
+    workflow.add_node("field_service", node_field_service)
     workflow.add_node("notify", node_notify)
     workflow.add_node("audit", node_audit)
 
@@ -754,7 +849,11 @@ def build_agent_graph() -> StateGraph:
         "escalate": "escalate",
     })
     workflow.add_edge("lightspeed", "notify")
-    workflow.add_edge("remediate", "notify")
+    workflow.add_conditional_edges("remediate", route_after_remediate, {
+        "notify": "notify",
+        "field_service": "field_service",
+    })
+    workflow.add_edge("field_service", "notify")
     workflow.add_edge("escalate", "notify")
     workflow.add_edge("notify", "audit")
     workflow.add_edge("audit", END)

@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - mcp-servers-deployment.yaml
+  - agent-build.yaml

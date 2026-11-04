@@ -26,6 +26,39 @@ spec:
               value: redis.dark-noc-observability.svc
             - name: REDIS_PORT
               value: "6379"
+            # Headless init: creates org, project, API keys (used by the agent)
+            # and the admin user on first start. Without it Langfuse has no
+            # project and every agent trace upload fails.
+            - name: LANGFUSE_INIT_ORG_ID
+              value: dark-noc
+            - name: LANGFUSE_INIT_ORG_NAME
+              value: Dark NOC
+            - name: LANGFUSE_INIT_PROJECT_ID
+              value: dark-noc-agent
+            - name: LANGFUSE_INIT_PROJECT_NAME
+              value: Dark NOC Agent
+            - name: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse-secrets
+                  key: INIT_PROJECT_PUBLIC_KEY
+                  optional: true
+            - name: LANGFUSE_INIT_PROJECT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse-secrets
+                  key: INIT_PROJECT_SECRET_KEY
+                  optional: true
+            - name: LANGFUSE_INIT_USER_EMAIL
+              value: admin@darknoc.local
+            - name: LANGFUSE_INIT_USER_NAME
+              value: admin
+            - name: LANGFUSE_INIT_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse-secrets
+                  key: INIT_USER_PASSWORD
+                  optional: true
           web:
             service:
               type: ClusterIP

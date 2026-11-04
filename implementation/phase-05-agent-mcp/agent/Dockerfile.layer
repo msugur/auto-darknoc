@@ -1,0 +1,4 @@
+# Fast rebuild: layer the current agent code onto the released agent image
+# (dependencies unchanged). Built in-cluster by BuildConfig dark-noc-agent-layer.
+FROM quay.io/msugur/auto-darknoc:agent-ocpai-3.4-ready
+COPY agent.py state.py /app/
