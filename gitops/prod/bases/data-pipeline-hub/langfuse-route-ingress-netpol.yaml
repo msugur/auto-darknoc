@@ -21,3 +21,32 @@ spec:
       ports:
         - protocol: TCP
           port: 3000
+---
+# In-cluster trace ingestion: the LangGraph agent (dark-noc-hub), chatbot
+# (dark-noc-ui) and MCP servers send traces to langfuse-web:3000. Without this
+# only the router could reach Langfuse and every SDK upload timed out.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dark-noc-to-langfuse-web
+  namespace: dark-noc-observability
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+      app.kubernetes.io/instance: langfuse
+      app.kubernetes.io/name: langfuse
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [dark-noc-hub, dark-noc-ui, dark-noc-mcp]
+      ports:
+        - protocol: TCP
+          port: 3000
