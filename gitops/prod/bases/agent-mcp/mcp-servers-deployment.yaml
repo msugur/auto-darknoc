@@ -223,7 +223,7 @@ spec:
             - name: PORT
               value: "8004"
             - name: AAP_URL
-              value: "https://aap-enterprise-controller-aap.apps.ocp.z6ch9.sandbox2776.opentlc.com"
+              value: "http://aap-enterprise-controller-service.aap.svc"
             - name: AAP_API_PREFIX
               value: "/api/controller/v2"
             - name: AAP_VERIFY_SSL
