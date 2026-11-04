@@ -4,14 +4,14 @@ set -euo pipefail
 # Dark NOC Lightspeed E2E
 # Validates: Kafka trigger -> Agent lightspeed path -> AAP job -> ServiceNow ticket
 
-HUB_API_URL="${HUB_API_URL:-https://api.ocp.v8w9c.sandbox205.opentlc.com:6443}"
-HUB_USER="${HUB_USER:-admin}"
-HUB_PASS="${HUB_PASS:-}"
+HUB_API_URL="${HUB_API_URL:?HUB_API_URL not set (source configs/hub/env.sh)}"
+HUB_USER="${HUB_USER:-${HUB_USERNAME:-admin}}"
+HUB_PASS="${HUB_PASS:-${HUB_PASSWORD:-}}"
 SCENARIO_SITE="${SCENARIO_SITE:-edge-01}"
 WAIT_SECONDS="${WAIT_SECONDS:-180}"
 
 if [[ -z "${HUB_PASS}" ]]; then
-  echo "HUB_PASS is required (export HUB_PASS=...)" >&2
+  echo "HUB_PASS/HUB_PASSWORD is required (source configs/hub/env.sh)" >&2
   exit 1
 fi
 
@@ -19,7 +19,8 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "Missing command: $1" >&2; ex
 need oc
 need curl
 need jq
-need rg
+# rg is optional; fall back to grep -E
+if command -v rg >/dev/null 2>&1; then RG=(rg); else RG=(grep -E); fi
 
 oc_retry() {
   local attempts=${1:-8}
@@ -39,8 +40,9 @@ oc_retry 8 oc login -u "$HUB_USER" -p "$HUB_PASS" --server="$HUB_API_URL" --inse
 oc_retry 8 oc whoami >/dev/null
 
 KAFKA_POD="$(oc_retry 8 oc -n dark-noc-kafka get pod -l strimzi.io/name=dark-noc-kafka-kafka -o json | jq -r '.items[0].metadata.name')"
-AAP_URL="$(oc_retry 8 oc -n dark-noc-mcp get deploy mcp-aap -o json | jq -r '.spec.template.spec.containers[0].env[] | select(.name=="AAP_URL") | .value')"
-AAP_PASS="$(oc_retry 8 oc -n dark-noc-mcp get secret aap-admin-secret -o jsonpath='{.data.AAP_PASSWORD}' | base64 -d)"
+# Use the AAP gateway route: mcp-aap's AAP_URL is an in-cluster service, unreachable from a workstation.
+AAP_URL="https://$(oc_retry 8 oc -n aap get route aap-enterprise -o jsonpath='{.spec.host}')"
+AAP_PASS="$(oc_retry 8 oc -n dark-noc-mcp get secret aap-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 SNOW_URL="$(oc_retry 8 oc -n dark-noc-mcp get secret servicenow-secrets -o jsonpath='{.data.SERVICENOW_URL}' | base64 -d)"
 SNOW_USER="$(oc_retry 8 oc -n dark-noc-mcp get secret servicenow-secrets -o jsonpath='{.data.SERVICENOW_USERNAME}' | base64 -d)"
 SNOW_PASS="$(oc_retry 8 oc -n dark-noc-mcp get secret servicenow-secrets -o jsonpath='{.data.SERVICENOW_PASSWORD}' | base64 -d)"
@@ -67,7 +69,7 @@ echo "[3/8] Wait for lightspeed logs in agent"
 DEADLINE=$(( $(date +%s) + WAIT_SECONDS ))
 FOUND=0
 while (( $(date +%s) < DEADLINE )); do
-  if oc -n dark-noc-hub logs deploy/dark-noc-agent --since=10m 2>/dev/null | rg -q "\[LIGHTSPEED\]|lightspeed-generate-and-run|generated-ansible-job-failure"; then
+  if oc -n dark-noc-hub logs deploy/dark-noc-agent --since=10m 2>/dev/null | "${RG[@]}" -q "\[LIGHTSPEED\]|lightspeed-generate-and-run|generated-ansible-job-failure"; then
     FOUND=1
     break
   fi
@@ -79,7 +81,7 @@ if [[ "$FOUND" -ne 1 ]]; then
 fi
 
 echo "[4/8] Collect evidence"
-AGENT_EVIDENCE="$(oc -n dark-noc-hub logs deploy/dark-noc-agent --since=15m 2>/dev/null | rg -n "LIGHTSPEED|generated-ansible|job_id|ServiceNow|incident|slack" | tail -n 60 || true)"
+AGENT_EVIDENCE="$(oc -n dark-noc-hub logs deploy/dark-noc-agent --since=15m 2>/dev/null | "${RG[@]}" -n "LIGHTSPEED|generated-ansible|job_id|ServiceNow|incident|slack" | tail -n 60 || true)"
 AAP_JOBS="$(curl -ksS -u "admin:${AAP_PASS}" "${AAP_URL}/api/controller/v2/jobs/?order_by=-id&page_size=10" | jq -r '.results[] | "id=\(.id) status=\(.status) template=\(.summary_fields.job_template.name) started=\(.started)"')"
 GEN_TEMPLATES="$(curl -ksS -u "admin:${AAP_PASS}" "${AAP_URL}/api/controller/v2/job_templates/?name__startswith=generated-ansible-job-failure&order_by=-id&page_size=5" | jq -r '.results[] | "id=\(.id) name=\(.name) playbook=\(.playbook)"')"
 INCIDENTS="$(curl -ksS -u "${SNOW_USER}:${SNOW_PASS}" "${SNOW_URL}/api/now/table/incident?sysparm_limit=5&sysparm_fields=number,short_description,sys_created_on&sysparm_query=ORDERBYDESCsys_created_on" | jq -r '.result[] | "number=\(.number) short=\(.short_description) created=\(.sys_created_on)"')"
@@ -105,13 +107,13 @@ else
   echo "WARN: No new AAP job ID greater than baseline"
 fi
 
-if echo "$GEN_TEMPLATES" | rg -q "generated-ansible-job-failure"; then
+if echo "$GEN_TEMPLATES" | "${RG[@]}" -q "generated-ansible-job-failure"; then
   echo "PASS: Generated template present"
 else
   echo "WARN: No generated template found in latest query"
 fi
 
-if echo "$INCIDENTS" | rg -qi "Dark NOC|Lightspeed|Ansible"; then
+if echo "$INCIDENTS" | "${RG[@]}" -qi "Dark NOC|Lightspeed|Ansible"; then
   echo "PASS: ServiceNow incident evidence present"
 else
   echo "WARN: Could not confirm new ServiceNow lightspeed incident by text"
@@ -120,6 +122,6 @@ fi
 echo "[7/8] Optional manual checks"
 echo "- AAP Jobs UI: ${AAP_URL}/#/jobs"
 echo "- ServiceNow list: ${SNOW_URL}/incident_list.do"
-echo "- Dashboard: https://dark-noc-dashboard-dark-noc-ui.apps.ocp.v8w9c.sandbox205.opentlc.com"
+echo "- Dashboard: https://$(oc -n dark-noc-ui get route dark-noc-dashboard -o jsonpath='{.spec.host}')"
 
 echo "[8/8] Complete"

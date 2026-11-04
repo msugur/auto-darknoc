@@ -55,7 +55,7 @@ scenario_oomkill() {
   oc --context=${EDGE_CONTEXT:-} patch deployment nginx \
     -n ${EDGE_NS} \
     --type=json \
-    -p='[{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"32Mi"}]'
+    -p='[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests/memory","value":"16Mi"},{"op":"replace","path":"/spec/template/spec/containers/0/resources/limits/memory","value":"32Mi"}]'
   pass "Memory limit reduced to 32Mi"
 
   # Step 3: Wait for OOMKill to occur
