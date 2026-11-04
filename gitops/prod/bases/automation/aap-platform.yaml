@@ -38,3 +38,7 @@ spec:
     worker:
       replicas: 1
   eda: {}
+  # Ansible Lightspeed intelligent assistant backed by the OpenShift AI model
+  lightspeed:
+    disabled: false
+    chatbot_config_secret_name: lightspeed-chatbot-config
