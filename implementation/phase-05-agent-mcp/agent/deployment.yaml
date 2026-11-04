@@ -120,4 +120,4 @@ stringData:
   PG_CHECKPOINT_URL: "postgresql://langfuse:langfuse-pg-demo-2026@langfuse-postgres-rw.dark-noc-observability.svc:5432/langfuse"
   LANGFUSE_PUBLIC_KEY: ""
   LANGFUSE_SECRET_KEY: ""
-  LANGFUSE_HOST: "http://langfuse.dark-noc-observability.svc:3000"
+  LANGFUSE_HOST: "http://langfuse-web.dark-noc-observability.svc:3000"
