@@ -132,7 +132,9 @@ if [[ ${#MINIO_ROOT_PASSWORD} -lt 8 ]]; then
   MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD}123"
 fi
 MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-admin}"
-MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-redhat}"
+# S3 clients (Langfuse, Loki) authenticate as the MinIO root user, so the
+# secret key must equal the (length-adjusted) root password.
+MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-$MINIO_ROOT_PASSWORD}"
 PGVECTOR_PASSWORD="${PGVECTOR_PASSWORD:-redhat}"
 LANGFUSE_DB_PASSWORD="${LANGFUSE_DB_PASSWORD:-redhat}"
 CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:-redhat}"
