@@ -66,7 +66,7 @@ spec:
       owner: noc_agent
       secret:
         name: pgvector-superuser
-      postInitSQL:
+      postInitApplicationSQL:   # runs in the app DB (noc_rag); postInitSQL targets "postgres"
         - "CREATE EXTENSION IF NOT EXISTS vector;"
         - |
           CREATE TABLE IF NOT EXISTS documents (
