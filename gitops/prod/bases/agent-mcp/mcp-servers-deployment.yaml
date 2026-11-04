@@ -223,7 +223,7 @@ spec:
             - name: PORT
               value: "8004"
             - name: AAP_URL
-              value: "http://aap-enterprise-controller-service.aap.svc"
+              value: "http://aap-enterprise.aap.svc"   # AAP gateway (platform auth); controller svc rejects platform admin
             - name: AAP_API_PREFIX
               value: "/api/controller/v2"
             - name: AAP_VERIFY_SSL
