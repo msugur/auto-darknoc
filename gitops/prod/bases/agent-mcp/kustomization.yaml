@@ -4,3 +4,4 @@ resources:
   - deployment.yaml
   - mcp-servers-deployment.yaml
   - agent-build.yaml
+  - mcp-servicenow-build.yaml

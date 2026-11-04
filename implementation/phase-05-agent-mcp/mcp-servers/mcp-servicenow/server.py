@@ -160,6 +160,10 @@ def _notify_slack_ticket_created(ticket: dict) -> dict:
         return {"sent": False, "reason": str(exc)}
 
 
+_PRIORITY_MATRIX = {1: (1, 1), 2: (1, 2), 3: (2, 2), 4: (3, 2), 5: (3, 3)}
+SNOW_CLOSE_CODE = os.getenv("SERVICENOW_CLOSE_CODE", "Solution provided")
+
+
 @mcp.tool()
 def create_incident(
     short_description: str,
@@ -202,8 +206,10 @@ def create_incident(
                 "category": category,
                 "subcategory": subcategory,
                 "state": "1",           # 1 = New
-                "urgency": str(priority),
-                "impact": str(priority),
+                # ServiceNow derives priority from impact x urgency; map the
+                # requested priority onto the default matrix (P2 = I1/U2).
+                "impact": str(_PRIORITY_MATRIX.get(int(priority), (2, 2))[0]),
+                "urgency": str(_PRIORITY_MATRIX.get(int(priority), (2, 2))[1]),
             }
             if is_real_servicenow():
                 # Real ServiceNow expects assignment_group to be a sys_id. A
@@ -271,6 +277,10 @@ def update_incident(
     payload: dict = {"work_notes": work_notes}
     if state and state in state_map:
         payload["state"] = state_map[state]
+        if state in ("resolved", "closed"):
+            # Resolving requires a close code and notes on real ServiceNow.
+            payload["close_code"] = SNOW_CLOSE_CODE
+            payload["close_notes"] = work_notes
 
     with snow_client() as client:
         record = _lookup_incident(client, ticket_number)

@@ -1,0 +1,40 @@
+# In-cluster build of mcp-servicenow from this branch (ocpai35): priority mapped
+# to ServiceNow impact/urgency, and resolve sends close_code/close_notes.
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: mcp-servicenow
+  namespace: dark-noc-mcp
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: mcp-servicenow-layer
+  namespace: dark-noc-mcp
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://github.com/msugur/auto-darknoc.git
+      ref: ocpai35
+    contextDir: implementation/phase-05-agent-mcp/mcp-servers/mcp-servicenow
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile.layer
+      pullSecret:
+        name: quay-pull
+  output:
+    to:
+      kind: ImageStreamTag
+      name: mcp-servicenow:ocpai35
+  triggers:
+    - type: ConfigChange

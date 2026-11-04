@@ -335,11 +335,10 @@ spec:
       labels:
         app: mcp-servicenow
     spec:
-      imagePullSecrets:
-        - name: quay-pull
+      # in-cluster image; default SA dockercfg (and linked quay-pull) supply auth
       containers:
         - name: server
-          image: quay.io/msugur/auto-darknoc:mcp-servicenow-ocpai-3.4-ready
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-mcp/mcp-servicenow:ocpai35
           imagePullPolicy: Always
           ports:
             - containerPort: 8006

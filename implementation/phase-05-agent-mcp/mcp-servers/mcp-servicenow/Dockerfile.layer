@@ -1,0 +1,3 @@
+# Fast rebuild: layer current server.py onto the released mcp-servicenow image.
+FROM quay.io/msugur/auto-darknoc:mcp-servicenow-ocpai-3.4-ready
+COPY server.py /app/server.py
