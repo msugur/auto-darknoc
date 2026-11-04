@@ -18,4 +18,4 @@ stringData:
   chatbot_token: not-required
   chatbot_llm_provider_type: rhoai_vllm
   chatbot_context_window_size: "16000"
-  chatbot_temperature_override: "0.2"
+  chatbot_temperature_override: "0"   # deterministic: fewer invented tool calls on a 3B model

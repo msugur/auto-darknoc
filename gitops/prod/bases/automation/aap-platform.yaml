@@ -26,6 +26,9 @@ spec:
   admin_password_secret: aap-admin-secret
   ingress_type: Route
   route_tls_termination_mechanism: Edge
+  # Lightspeed chat on a small model can exceed the 30s router default
+  route_annotations: |
+    haproxy.router.openshift.io/timeout: 180s
   no_log: true
   controller: {}
   hub:
