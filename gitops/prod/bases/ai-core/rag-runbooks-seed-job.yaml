@@ -93,6 +93,6 @@ spec:
           configMap:
             name: rag-runbooks-seed-script
             defaultMode: 0755
-        - name: docs-config
+        - name: runbooks
           configMap:
-            name: rag-docs-sources
+            name: rag-runbooks
