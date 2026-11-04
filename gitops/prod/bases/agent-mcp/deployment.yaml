@@ -30,8 +30,8 @@ spec:
         app: dark-noc-agent
     spec:
       serviceAccountName: dark-noc-agent
-      imagePullSecrets:
-        - name: quay-pull
+      # Image comes from the in-cluster registry (BuildConfig dark-noc-agent-layer);
+      # the service account's dockercfg secret supplies registry auth.
       containers:
         - name: agent
           image: image-registry.openshift-image-registry.svc:5000/dark-noc-hub/dark-noc-agent:ocpai35
