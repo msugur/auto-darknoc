@@ -1,0 +1,29 @@
+---
+# Hub Event-Driven Ansible fast path: Kafka event -> EDA rule -> AAP job,
+# with no AI in the loop. Scoped to dark_noc_scenario=eda events, which are
+# published at level "info" so the LangGraph agent (error/warn only) ignores
+# them and each event is remediated exactly once.
+# ansible.eda.kafka delivers the decoded message under event.body.
+- name: Dark NOC hub EDA fast path
+  hosts: all
+  sources:
+    - ansible.eda.kafka:
+        host: dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc
+        port: 9092
+        topic: nginx-logs
+        group_id: eda-fast-path
+        offset: latest
+  rules:
+    - name: EDA restart nginx on OOMKilled
+      condition: >
+        event.body.labels.dark_noc_scenario == "eda" and
+        event.body.message is search("OOMKilled", ignorecase=true)
+      action:
+        run_job_template:
+          name: restart-nginx
+          organization: Default
+          job_args:
+            extra_vars:
+              namespace: dark-noc-edge
+              deployment: nginx
+              edge_cluster: "{{ event.body.labels.edge_site_id }}"
