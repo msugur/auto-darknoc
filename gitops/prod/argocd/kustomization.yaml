@@ -4,3 +4,4 @@ resources:
   - openshift-gitops-subscription.yaml
   - project.yaml
   - notifications-config.yaml
+  - application-controller-rbac.yaml

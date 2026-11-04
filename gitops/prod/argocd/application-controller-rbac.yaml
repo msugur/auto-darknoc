@@ -1,0 +1,18 @@
+# The default openshift-gitops instance can only manage a limited set of
+# cluster resources. Dark NOC manages operators, AAP/Kafka/Loki CRs, Jobs and
+# NetworkPolicies across many namespaces, so the application controller needs
+# cluster-admin (standard for a platform-level GitOps instance).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: auto-darknoc-argocd-application-controller
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
