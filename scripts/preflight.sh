@@ -192,7 +192,7 @@ fi
 # ============================================================
 header "CHECK 6: Existing Operators (conflict check)"
 CONFLICT_OPERATORS="advanced-cluster-management|amq-streams|ansible-automation-platform|aap|loki|multicluster"
-RHOAI_CSV=$(oc get csv -A --no-headers 2>/dev/null | awk '/rhods-operator/ {print $2; exit}')
+RHOAI_CSV=$(oc get csv -A --no-headers 2>/dev/null | awk '/rhods-operator/ RHOAI_CSV=$(oc get csv -A --no-headers 2>/dev/null | awk '/rhods-operator/ {print $2; exit}')RHOAI_CSV=$(oc get csv -A --no-headers 2>/dev/null | awk '/rhods-operator/ {print $2; exit}') !f {print $2; f=1}' || true)
 if [[ -n "${RHOAI_CSV}" ]]; then
     if [[ "${RHOAI_CSV}" == rhods-operator.3.* ]]; then
         pass "OpenShift AI already installed: ${RHOAI_CSV}"
