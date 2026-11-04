@@ -11,7 +11,9 @@
 #
 # The Dark NOC agent calls vLLM directly; this server exposes the same model
 # through the OGX/Llama Stack API surface for the Responses API demo path.
-# Storage uses the OGX default (embedded) — no external Postgres required.
+# Storage is embedded sqlite (spec.storage) — the rh base config otherwise
+# expects Postgres env vars. baseConfig is supplied from a ConfigMap so the
+# operator does not need to read image labels from registry.redhat.io.
 # =============================================================
 apiVersion: ogx.io/v1beta1
 kind: OGXServer
@@ -24,6 +26,14 @@ metadata:
 spec:
   distribution:
     name: rh
+  baseConfig:
+    name: ogx-base-config
+    key: config.yaml
+  storage:
+    kv:
+      type: sqlite
+    sql:
+      type: sqlite
   network:
     port: 8321
     externalAccess:

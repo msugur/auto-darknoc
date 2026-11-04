@@ -5,6 +5,17 @@ resources:
   - rag-docs-seed-job.yaml
   - ocpai-34-demo-enablement.yaml
 configMapGenerator:
+  # Base config of the rh OGX distribution (extracted from
+  # odh-ogx-core-rhel9 /opt/app-root/config.yaml). Supplying it avoids the
+  # operator fetching image labels from registry.redhat.io, which 401s.
+  - name: ogx-base-config
+    namespace: dark-noc-hub
+    options:
+      labels:
+        ogx.io/watch: "true"
+        app.kubernetes.io/part-of: dark-noc
+    files:
+      - config.yaml=ogx-base-config.yaml
   - name: rag-docs-seed-script
     namespace: dark-noc-rag
     files:
