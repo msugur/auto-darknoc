@@ -357,6 +357,9 @@ Provide structured root cause analysis as JSON."""
     scenario = str(log.get("raw", {}).get("labels", {}).get("dark_noc_scenario", "")).strip().lower()
     if scenario == "lightspeed":
         next_action = "lightspeed"
+    elif scenario == "escalation":
+        # Dashboard "ServiceNow Escalation" demo: always route to a human
+        next_action = "escalate"
     elif scenario in REMEDIATE_SCENARIOS:
         next_action = "remediate"
     else:
