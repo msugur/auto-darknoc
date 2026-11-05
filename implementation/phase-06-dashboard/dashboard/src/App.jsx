@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { StatusCard } from "./components/StatusCard";
 import { ChatPanel } from "./components/ChatPanel";
 
+// Fallback Demo Mode catalog; the live list comes from GET /api/demo/scenarios
+const FALLBACK_DEMO_SCENARIOS = [
+  { id: "edge-oom", step: 1, title: "Edge Self-Heal · OOM Fault", path: "Real fault at the edge → edge EDA fast path (~10 s) + hub AI RCA → AAP", handled_by: "Edge EDA + AI agent" },
+  { id: "ai-crashloop", step: 2, title: "AI RCA → AAP Remediation · CrashLoop", path: "AI agent (RAG + LLM on OpenShift AI) → AAP restart-nginx → auto-resolved ticket", handled_by: "AI agent" },
+  { id: "eda-fast-path", step: 3, title: "Event-Driven Ansible · Rule Fast Path", path: "Kafka → EDA rulebook → AAP job — known pattern, no AI, no GPU", handled_by: "Hub EDA rulebook" },
+  { id: "ai-playbook", step: 4, title: "AI-Generated Playbook · Lightspeed Path", path: "AI writes an incident-specific playbook → AAP wrapper job executes it", handled_by: "AI agent + AAP" },
+  { id: "ai-escalation", step: 5, title: "AI Escalation → ServiceNow", path: "AI judges it unsafe to automate → human ticket + Slack, nothing executed", handled_by: "AI agent → human" },
+  { id: "field-dispatch", step: 6, title: "Field Dispatch · Hardware Fault", path: "AAP fix fails → fallback fails → P2 ticket to Field Services + Slack", handled_by: "AI agent → Field Services" }
+];
+
 function buildChatbotCandidates() {
   const candidates = [""];
   const env =
@@ -194,9 +204,26 @@ export default function App() {
     };
   }, []);
 
+  const [demoScenarios, setDemoScenarios] = useState(FALLBACK_DEMO_SCENARIOS);
+  const [demoActive, setDemoActive] = useState("");
+
+  useEffect(() => {
+    const target = chatbotBase ? `${chatbotBase}/api/demo/scenarios` : "/api/demo/scenarios";
+    fetch(target)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.scenarios) && data.scenarios.length) {
+          setDemoScenarios(data.scenarios);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function triggerDemo(scenario) {
     setDemoLoading(true);
+    setDemoActive(scenario);
     setDemoError("");
+    setDemoResult(null);
     try {
       const target = chatbotBase ? `${chatbotBase}/api/demo/trigger` : "/api/demo/trigger";
       const res = await fetch(target, {
@@ -205,7 +232,12 @@ export default function App() {
         body: JSON.stringify({ scenario, site: "edge-01" })
       });
       if (!res.ok) {
-        throw new Error(`Trigger failed (${res.status})`);
+        let detail = `Trigger failed (${res.status})`;
+        try {
+          const body = await res.json();
+          detail = body.detail || body.error || detail;
+        } catch {}
+        throw new Error(detail);
       }
       const data = await res.json();
       setDemoResult(data);
@@ -213,6 +245,7 @@ export default function App() {
       setDemoError(err.message || "Demo trigger failed");
     } finally {
       setDemoLoading(false);
+      setDemoActive("");
     }
   }
 
@@ -220,7 +253,7 @@ export default function App() {
     <main className="page">
       <section className="hero">
         <p className="badge">AUTONOMOUS NOC · ENTERPRISE OPS</p>
-        <h1>Dark NOC Operations Command Center</h1>
+        <h1>Agentic AI Autonomous Remediation Console</h1>
         <p className="sub">
           Unified operational surface for `edge-01`: AI agent runtime, MCP mesh,
           platform dependencies, and incident/error flow topology.
@@ -394,26 +427,75 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <h2>Demo Mode (UI Trigger)</h2>
-        <p>Run a controlled E2E simulation from the dashboard and follow results across AAP, ServiceNow, Slack, and Langfuse.</p>
+        <h2>Demo Mode · Autonomous Remediation Scenarios</h2>
+        <p>
+          Run each scenario in order and follow it across the edge, the AI agent, AAP, ServiceNow, Slack and Langfuse.
+          Wait for the result before starting the next one.
+        </p>
         <div className="demo-actions">
-          <button disabled={demoLoading} onClick={() => triggerDemo("crashloop")}>Trigger AI-Hub CrashLoop Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("oom")}>Trigger Edge OOM Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("lightspeed")}>Trigger Ansible Lightspeed Demo</button>
-          <button disabled={demoLoading} onClick={() => triggerDemo("escalation")}>Trigger ServiceNow Escalation Demo</button>
+          {demoScenarios.map((sc) => (
+            <button
+              key={sc.id}
+              type="button"
+              className={demoActive === sc.id ? "demo-btn running" : "demo-btn"}
+              disabled={demoLoading}
+              onClick={() => triggerDemo(sc.id)}
+              title={sc.path}
+            >
+              <span className="demo-step">{sc.step}</span>
+              <span className="demo-text">
+                <span className="demo-title">{sc.title}</span>
+                <span className="demo-path">{sc.path}</span>
+                <span className="demo-handler">{sc.handled_by}</span>
+              </span>
+            </button>
+          ))}
         </div>
+        {demoLoading ? <p className="demo-running">Publishing scenario event…</p> : null}
         {demoError ? <p className="demo-error">{demoError}</p> : null}
         {demoResult ? (
           <div className="demo-result">
-            <p>
-              <strong>Queued:</strong> scenario=<code>{demoResult.scenario}</code> · topic=<code>{demoResult.topic}</code> · offset=<code>{demoResult.kafka_offset}</code>
+            <p className="demo-result-title">
+              <strong>Step {demoResult.step}: {demoResult.title || demoResult.scenario}</strong>
+              {demoResult.handled_by ? <span className="demo-handler-chip">{demoResult.handled_by}</span> : null}
             </p>
+            <p>
+              <strong>Queued:</strong> scenario=<code>{demoResult.scenario_id || demoResult.scenario}</code> · topic=<code>{demoResult.topic}</code> · offset=<code>{demoResult.kafka_offset}</code>
+            </p>
+            {demoResult.edge_injection_status ? (
+              <p>
+                <strong>Edge injection:</strong>{" "}
+                <span className={demoResult.edge_injection_status === "success" ? "status-text up" : "status-text down"}>
+                  {demoResult.edge_injection_status}
+                </span>
+              </p>
+            ) : null}
+            {demoResult.expected_rollout ? (
+              <p><strong>Expected rollout:</strong> {demoResult.expected_rollout}</p>
+            ) : null}
             <p><strong>Event:</strong> {demoResult.event_message}</p>
+            {demoResult.next_steps?.length ? (
+              <>
+                <p><strong>What to watch:</strong></p>
+                <ul className="demo-next-steps">
+                  {demoResult.next_steps.map((step) => <li key={step}>{step}</li>)}
+                </ul>
+              </>
+            ) : null}
             <div className="demo-links">
-              <a href={demoResult.links?.aap_jobs} target="_blank" rel="noreferrer">Open AAP Jobs</a>
-              <a href={demoResult.links?.servicenow_incidents} target="_blank" rel="noreferrer">Open ServiceNow Incidents</a>
-              <a href={demoResult.links?.slack} target="_blank" rel="noreferrer">Open Slack #demos</a>
-              <a href={demoResult.links?.langfuse} target="_blank" rel="noreferrer">Open Langfuse</a>
+              {(demoResult.links_list && demoResult.links_list.length
+                ? demoResult.links_list
+                : [
+                    { key: "aap_jobs", label: "AAP Jobs", url: demoResult.links?.aap_jobs },
+                    { key: "servicenow", label: "ServiceNow", url: demoResult.links?.servicenow_incidents },
+                    { key: "slack", label: "Slack #demos", url: demoResult.links?.slack },
+                    { key: "langfuse", label: "Langfuse", url: demoResult.links?.langfuse }
+                  ]
+              )
+                .filter((l) => l.url)
+                .map((l) => (
+                  <a key={l.key} href={l.url} target="_blank" rel="noreferrer">Open {l.label}</a>
+                ))}
             </div>
           </div>
         ) : null}

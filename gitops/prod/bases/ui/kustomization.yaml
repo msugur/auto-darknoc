@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - model-binding-configmap.yaml
   - deployment.yaml
+  - ui-build.yaml

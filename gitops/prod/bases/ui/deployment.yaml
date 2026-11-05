@@ -17,11 +17,10 @@ spec:
       labels:
         app: dark-noc-dashboard
     spec:
-      imagePullSecrets:
-        - name: quay-pull
+      # in-cluster images; default SA dockercfg supplies registry auth
       containers:
         - name: dashboard
-          image: quay.io/msugur/auto-darknoc:dashboard-ocpai-3.4-ready
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-ui/dark-noc-dashboard:ocpai35
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -88,17 +87,18 @@ spec:
       labels:
         app: dark-noc-chatbot
     spec:
-      imagePullSecrets:
-        - name: quay-pull
+      # in-cluster images; default SA dockercfg supplies registry auth
       containers:
         - name: chatbot
-          image: quay.io/msugur/auto-darknoc:chatbot-ocpai-3.4-ready
+          image: image-registry.openshift-image-registry.svc:5000/dark-noc-ui/dark-noc-chatbot:ocpai35
           ports:
             - containerPort: 8080
           envFrom:
             - secretRef:
                 name: ui-access-secrets
           env:
+            - name: SLACK_CHANNEL_ID   # Demo Mode deep link to #demos
+              value: "C08MUDSNHED"
             - name: AI_MODEL_NAME
               valueFrom:
                 configMapKeyRef:

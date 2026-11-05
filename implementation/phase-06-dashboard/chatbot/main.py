@@ -19,7 +19,7 @@ from typing import Any
 from uuid import uuid4
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from kafka import KafkaConsumer, KafkaProducer
 from pydantic import BaseModel
@@ -36,7 +36,10 @@ SERVICENOW_USERNAME = os.getenv("SERVICENOW_USERNAME", "")
 SERVICENOW_PASSWORD = os.getenv("SERVICENOW_PASSWORD", "")
 SLACK_WORKSPACE_URL = os.getenv("SLACK_WORKSPACE_URL", "")
 SERVICENOW_UI_URL = os.getenv("SERVICENOW_UI_URL", "")
-OPENSHIFT_CONSOLE_URL = os.getenv("OPENSHIFT_CONSOLE_URL", "")
+OPENSHIFT_CONSOLE_URL = os.getenv("OPENSHIFT_CONSOLE_URL", "") or (
+    os.getenv("DASHBOARD_URL", "").replace("dark-noc-dashboard-dark-noc-ui.", "console-openshift-console.")
+    if "dark-noc-dashboard-dark-noc-ui." in os.getenv("DASHBOARD_URL", "") else ""
+)
 OPENSHIFT_EDGE_CONSOLE_URL = os.getenv("OPENSHIFT_EDGE_CONSOLE_URL", "")
 AAP_UI_URL = os.getenv("AAP_UI_URL", "")
 AAP_LIGHTSPEED_URL = os.getenv("AAP_LIGHTSPEED_URL", "")
@@ -79,6 +82,11 @@ DEMO_KAFKA_BOOTSTRAP = os.getenv(
     "dark-noc-kafka-kafka-bootstrap.dark-noc-kafka.svc:9092",
 )
 DEMO_TOPIC = os.getenv("DEMO_TOPIC", "nginx-logs")
+EDGE_DEMO_TRIGGER_URL = os.getenv(
+    "EDGE_DEMO_TRIGGER_URL",
+    "http://edge-eda-runner.dark-noc-edge.svc:5000/endpoint",
+)
+EDGE_DEMO_TRIGGER_TIMEOUT_SECONDS = float(os.getenv("EDGE_DEMO_TRIGGER_TIMEOUT_SECONDS", "10"))
 SLO_AUDIT_TOPIC = os.getenv("SLO_AUDIT_TOPIC", "incident-audit")
 SLO_LOOKBACK_HOURS = int(os.getenv("SLO_LOOKBACK_HOURS", "24"))
 SLO_MAX_MESSAGES = int(os.getenv("SLO_MAX_MESSAGES", "500"))
@@ -700,36 +708,156 @@ def build_incident_movie_and_impact(records: list[dict[str, Any]], slo_metrics: 
     return movie, impact
 
 
-def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
-    now = datetime.now(timezone.utc).isoformat()
-    normalized = scenario.strip().lower()
-    if normalized == "oom":
-        message = "OOMKilled: UI demo trigger on edge-01"
-        pod_name = "nginx-demo-oom"
-    elif normalized == "lightspeed":
-        message = "Ansible playbook generation requested for edge recovery (Lightspeed demo trigger)"
-        pod_name = "nginx-demo-lightspeed"
-    elif normalized == "escalation":
-        message = "Kernel panic and persistent data corruption in edge control process - requires human escalation"
-        pod_name = "edge-core-critical-demo"
-    else:
-        normalized = "crashloop"
-        message = "CrashLoopBackOff: nginx configuration test failed from UI demo trigger"
-        pod_name = "nginx-demo-crashloop"
+# ─────────────────────────────────────────────
+# Demo scenario catalog — single source of truth for dashboard Demo Mode.
+# The dashboard renders its buttons from GET /api/demo/scenarios, so adding a
+# scenario here is enough to add a button.
+# ─────────────────────────────────────────────
+AAP_GATEWAY_UI_URL = os.getenv("AAP_GATEWAY_UI_URL", "") or AAP_UI_URL.replace("-controller-aap.", "-aap.")
+SLACK_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID", "")
+OPENSHIFT_CONSOLE_URL = os.getenv("OPENSHIFT_CONSOLE_URL", "") or (
+    os.getenv("DASHBOARD_URL", "").replace("dark-noc-dashboard-dark-noc-ui.", "console-openshift-console.")
+    if "dark-noc-dashboard-dark-noc-ui." in os.getenv("DASHBOARD_URL", "") else ""
+)
+LANGFUSE_PROJECT_ID = os.getenv("LANGFUSE_PROJECT_ID", "dark-noc-agent")
 
+DEMO_SCENARIOS: list[dict[str, Any]] = [
+    {
+        "id": "edge-oom", "aliases": ["oom"], "label": "oom", "step": 1,
+        "title": "Edge Self-Heal · OOM Fault",
+        "path": "Real fault at the edge → edge EDA fast path (~10 s) + hub AI RCA → AAP",
+        "handled_by": "Edge EDA + AI agent",
+        "edge_inject": True, "level": "error", "pod": "nginx", "target": "nginx",
+        "message": "OOMKilled: nginx exceeded its memory limit on edge-01 (UI demo trigger)",
+        "watch": [
+            "Edge: nginx limit drops to 32Mi and is restored to 128Mi in ~10 s (edge EDA fast path).",
+            "Hub: AI agent RCA (RAG + LLM on OpenShift AI) → AAP restart-nginx job.",
+            "ServiceNow: [Dark NOC][AUTO-RESOLVED] ticket in state Resolved.",
+            "Slack #demos alert thread and a Langfuse dark-noc-rca trace.",
+        ],
+        "links": ["edge_topology", "aap_jobs", "servicenow_darknoc", "slack", "langfuse"],
+    },
+    {
+        "id": "ai-crashloop", "aliases": ["crashloop"], "label": "crashloop", "step": 2,
+        "title": "AI RCA → AAP Remediation · CrashLoop",
+        "path": "AI agent (RAG + LLM on OpenShift AI) → AAP restart-nginx → auto-resolved ticket",
+        "handled_by": "AI agent",
+        "level": "error", "pod": "nginx", "target": "nginx",
+        "message": "CrashLoopBackOff: nginx configuration test failed (UI demo trigger)",
+        "watch": [
+            "Agent: [RAG] runbook chunks → [ANALYZE] CrashLoopBackOff → [REMEDIATE] AAP job.",
+            "AAP Jobs: restart-nginx Successful (open Output).",
+            "ServiceNow: [Dark NOC][AUTO-RESOLVED] CrashLoopBackOff, Resolved.",
+            "Langfuse: structured RCA JSON, retrieved context and latency.",
+        ],
+        "links": ["aap_jobs", "servicenow_darknoc", "slack", "langfuse"],
+    },
+    {
+        "id": "eda-fast-path", "aliases": ["eda"], "label": "eda", "step": 3,
+        "title": "Event-Driven Ansible · Rule Fast Path",
+        "path": "Kafka → EDA rulebook → AAP job — known pattern, no AI, no GPU",
+        "handled_by": "Hub EDA rulebook",
+        # level=info: the AI agent only processes error/warn, so EDA alone handles it
+        "level": "info", "pod": "nginx", "target": "nginx",
+        "message": "nginx container OOMKilled on edge-01 (EDA fast path, UI demo trigger)",
+        "watch": [
+            "AAP Jobs: restart-nginx launched by EDA within ~15 s.",
+            "Rulebook Activations → dark-noc-hub-fast-path → Rule Audit shows the fired rule.",
+            "AI agent intentionally does nothing (event is info level).",
+        ],
+        "links": ["aap_jobs", "eda_activations"],
+    },
+    {
+        "id": "ai-playbook", "aliases": ["lightspeed"], "label": "lightspeed", "step": 4,
+        "title": "AI-Generated Playbook · Lightspeed Path",
+        "path": "AI writes an incident-specific playbook → AAP wrapper job executes it",
+        "handled_by": "AI agent + AAP",
+        "level": "error", "pod": "nginx", "target": "nginx",
+        "message": "Ansible playbook generation requested for edge recovery (Lightspeed demo trigger)",
+        "watch": [
+            "Agent: [LIGHTSPEED] job_id=… status=successful.",
+            "AAP Templates: new generated-<failure>-<id> template.",
+            "AAP Jobs: lightspeed-generate-and-run → Output shows the generated playbook, then runs it.",
+            "Slack #demos job summary.",
+        ],
+        "links": ["aap_jobs", "aap_templates", "slack", "langfuse"],
+    },
+    {
+        "id": "ai-escalation", "aliases": ["escalation"], "label": "escalation", "step": 5,
+        "title": "AI Escalation → ServiceNow",
+        "path": "AI judges it unsafe to automate → human ticket + Slack, nothing executed",
+        "handled_by": "AI agent → human",
+        "level": "error", "pod": "edge-core-critical", "target": "edge-core-critical",
+        "message": "Kernel panic and persistent data corruption in edge control process - requires human escalation",
+        "watch": [
+            "Agent: [ESCALATE] Creating ServiceNow ticket — no remediation attempted.",
+            "ServiceNow: [Dark NOC] Kernel panic … with AI summary, evidence, recommended actions.",
+            "AAP Jobs: no new job (nothing executed on a corrupted system).",
+        ],
+        "links": ["servicenow_darknoc", "slack", "langfuse"],
+    },
+    {
+        "id": "field-dispatch", "aliases": ["field"], "label": "field", "step": 6,
+        "title": "Field Dispatch · Hardware Fault",
+        "path": "AAP fix fails → fallback fails → P2 ticket to Field Services + Slack",
+        "handled_by": "AI agent → Field Services",
+        "level": "error", "pod": "edge-radio-gw", "target": "edge-radio-gw",
+        "message": "edge-radio-gw CrashLoopBackOff: RU fronthaul link down, SFP module not detected (hardware fault)",
+        "watch": [
+            "AAP Jobs: restart-nginx for edge-radio-gw FAILED (remote fix genuinely attempted).",
+            "Agent: [FIELD] Automated remediation failed; dispatching field service.",
+            "ServiceNow Field Services queue: [FIELD DISPATCH] ticket, Priority 2 – High.",
+            "Slack: FIELD DISPATCH alert.",
+        ],
+        "links": ["aap_jobs", "servicenow_field", "slack", "langfuse"],
+    },
+]
+_DEMO_INDEX: dict[str, dict[str, Any]] = {}
+for _sc in DEMO_SCENARIOS:
+    for _key in [_sc["id"], _sc["label"], *_sc.get("aliases", [])]:
+        _DEMO_INDEX[_key] = _sc
+
+
+def resolve_demo_scenario(scenario: str) -> dict[str, Any]:
+    key = (scenario or "").strip().lower()
+    if key not in _DEMO_INDEX:
+        raise HTTPException(status_code=400, detail=f"Unknown demo scenario '{scenario}'. Valid: {[s['id'] for s in DEMO_SCENARIOS]}")
+    return _DEMO_INDEX[key]
+
+
+def demo_links() -> dict[str, dict[str, str]]:
+    snow = SERVICENOW_URL.rstrip("/")
+    slack = f"{SLACK_WORKSPACE_URL.rstrip('/')}/archives/{SLACK_CHANNEL_ID}" if SLACK_CHANNEL_ID else SLACK_WORKSPACE_URL
+    console = OPENSHIFT_CONSOLE_URL.rstrip("/")
+    aap = AAP_GATEWAY_UI_URL.rstrip("/")
     return {
-        "@timestamp": now,
-        "message": message,
-        "level": "error",
+        "edge_topology": {"label": "Edge topology", "url": f"{console}/topology/ns/dark-noc-edge" if console else ""},
+        "aap_jobs": {"label": "AAP Jobs", "url": f"{aap}/execution/jobs" if aap else ""},
+        "aap_templates": {"label": "AAP Templates", "url": f"{aap}/execution/templates" if aap else ""},
+        "eda_activations": {"label": "EDA Rulebook Activations", "url": f"{aap}/decisions/rulebook-activations" if aap else ""},
+        "servicenow_darknoc": {"label": "ServiceNow · Dark NOC tickets", "url": f"{snow}/incident_list.do?sysparm_query=short_descriptionSTARTSWITH%5BDark%20NOC%5EORDERBYDESCsys_created_on" if snow else SERVICENOW_UI_URL},
+        "servicenow_field": {"label": "ServiceNow · Field Services queue", "url": f"{snow}/incident_list.do?sysparm_query=assignment_group.name%3DField%20Services%5EORDERBYDESCsys_created_on" if snow else SERVICENOW_UI_URL},
+        "slack": {"label": "Slack #demos", "url": slack},
+        "langfuse": {"label": "Langfuse traces", "url": f"{LANGFUSE_URL.rstrip('/')}/project/{LANGFUSE_PROJECT_ID}/traces" if LANGFUSE_URL else ""},
+    }
+
+
+def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
+    sc = resolve_demo_scenario(scenario)
+    return {
+        "@timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": sc["message"],
+        "level": sc["level"],
         "kubernetes": {
             "namespace_name": "dark-noc-edge",
-            "pod_name": pod_name,
+            "pod_name": f"{sc['pod']}-demo",
             "container_name": "nginx",
         },
         "labels": {
             "edge_site_id": site,
             "dark_noc_demo": "true",
-            "dark_noc_scenario": normalized,
+            "dark_noc_scenario": sc["label"],
+            "dark_noc_target_deployment": sc["target"],
         },
     }
 
@@ -744,6 +872,38 @@ def publish_demo_event(event: dict[str, Any]) -> int:
     producer.flush(timeout=10)
     producer.close(timeout=10)
     return int(metadata.offset)
+
+
+async def inject_edge_oom(site: str) -> dict[str, Any]:
+    payload = {
+        "action": "inject_oom",
+        "namespace": "dark-noc-edge",
+        "deployment": "nginx",
+        "site": site,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=EDGE_DEMO_TRIGGER_TIMEOUT_SECONDS) as client:
+            resp = await client.post(EDGE_DEMO_TRIGGER_URL, json=payload)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Edge OOM injection failed; Kafka event was not published: {exc}",
+        ) from exc
+
+    body: dict[str, Any]
+    try:
+        body = resp.json()
+    except Exception:
+        body = {"raw_body": resp.text}
+
+    if resp.status_code >= 400 or body.get("result") != "success":
+        reason = body.get("stderr") or body.get("error") or resp.text
+        raise HTTPException(
+            status_code=502,
+            detail=f"Edge OOM injection failed; Kafka event was not published: {reason}",
+        )
+
+    return body
 
 
 @app.get("/health")
@@ -1018,39 +1178,55 @@ async def integrations(force_refresh: bool = False) -> dict:
     return await get_integrations_payload(force_refresh=force_refresh)
 
 
+@app.get("/api/demo/scenarios")
+def list_demo_scenarios() -> dict:
+    """Catalog the dashboard uses to render Demo Mode buttons (in story order)."""
+    return {
+        "scenarios": [
+            {k: sc[k] for k in ("id", "step", "title", "path", "handled_by", "watch")}
+            for sc in sorted(DEMO_SCENARIOS, key=lambda x: x["step"])
+        ]
+    }
+
+
 @app.post("/api/demo/trigger")
 async def trigger_demo(req: DemoTriggerRequest) -> dict:
-    event = build_demo_event(req.scenario, req.site)
+    sc = resolve_demo_scenario(req.scenario)
+    event = build_demo_event(sc["id"], req.site)
+    edge_injection = None
+    expected_rollout = ""
+    if sc.get("edge_inject"):
+        edge_injection = await inject_edge_oom(req.site)
+        expected_rollout = str(edge_injection.get("expected_remediation", "nginx in dark-noc-edge: 32Mi → restored to 128Mi by the edge fast path"))
+
     offset = publish_demo_event(event)
-    scenario = event["labels"]["dark_noc_scenario"]
-    next_steps = [
-        "Watch AAP Jobs for restart-nginx execution (for crashloop/oom).",
-        "Watch ServiceNow incident list for escalation scenario.",
-        "Watch Slack #demos for incident/remediation notifications.",
-        "Watch Langfuse traces for darknoc project updates.",
-    ]
-    if scenario == "lightspeed":
-        next_steps = [
-            "Watch AAP Jobs for template lightspeed-generate-and-run.",
-            "Verify generated template entry appears in AAP Job Templates.",
-            "Watch ServiceNow for the Lightspeed governance incident.",
-            "Watch Slack #demos for Lightspeed job + ticket summary.",
-        ]
+    all_links = demo_links()
+    links = [dict(key=k, **all_links[k]) for k in sc["links"] if all_links.get(k, {}).get("url")]
     return {
         "timestamp": utc_now(),
         "status": "queued",
-        "scenario": scenario,
+        "scenario": sc["label"],
+        "scenario_id": sc["id"],
+        "step": sc["step"],
+        "title": sc["title"],
+        "path": sc["path"],
+        "handled_by": sc["handled_by"],
         "site": req.site,
         "topic": DEMO_TOPIC,
         "kafka_offset": offset,
+        "edge_injection_status": edge_injection["result"] if edge_injection else None,
+        "edge_injection": edge_injection,
+        "expected_rollout": expected_rollout,
         "event_message": event["message"],
-        "next_steps": next_steps,
+        "next_steps": sc["watch"],
+        "links_list": links,
+        # legacy keys kept for older dashboard builds
         "links": {
             "dashboard": os.getenv("DASHBOARD_URL", ""),
-            "aap_jobs": f"{AAP_UI_URL}/#/jobs",
-            "servicenow_incidents": SERVICENOW_UI_URL,
-            "slack": SLACK_WORKSPACE_URL,
-            "langfuse": LANGFUSE_URL,
+            "aap_jobs": all_links["aap_jobs"]["url"],
+            "servicenow_incidents": all_links["servicenow_darknoc"]["url"],
+            "slack": all_links["slack"]["url"],
+            "langfuse": all_links["langfuse"]["url"],
         },
     }
 

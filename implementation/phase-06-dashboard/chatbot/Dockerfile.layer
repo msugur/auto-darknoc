@@ -1,0 +1,3 @@
+# Fast rebuild: layer current main.py onto the released chatbot image.
+FROM quay.io/msugur/auto-darknoc:chatbot-ocpai-3.4-ready
+COPY main.py /app/main.py

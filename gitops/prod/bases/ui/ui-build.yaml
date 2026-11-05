@@ -1,0 +1,82 @@
+# In-cluster builds of the Dark NOC UI from this branch (ocpai35).
+# - dashboard: full Vite build (Demo Mode renders buttons from /api/demo/scenarios)
+# - chatbot:   layers current main.py (demo scenario catalog) onto the released image
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: dark-noc-dashboard
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: dark-noc-dashboard
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://github.com/msugur/auto-darknoc.git
+      ref: ocpai35
+    contextDir: implementation/phase-06-dashboard/dashboard
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: dark-noc-dashboard:ocpai35
+  triggers:
+    - type: ConfigChange
+  resources:
+    limits:
+      cpu: "2"
+      memory: 2Gi
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: dark-noc-chatbot
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: dark-noc-chatbot-layer
+  namespace: dark-noc-ui
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  runPolicy: Serial
+  source:
+    type: Git
+    git:
+      uri: https://github.com/msugur/auto-darknoc.git
+      ref: ocpai35
+    contextDir: implementation/phase-06-dashboard/chatbot
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile.layer
+      pullSecret:
+        name: quay-pull
+  output:
+    to:
+      kind: ImageStreamTag
+      name: dark-noc-chatbot:ocpai35
+  triggers:
+    - type: ConfigChange

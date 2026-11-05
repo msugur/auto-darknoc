@@ -145,29 +145,108 @@ body {
 }
 
 .demo-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 10px;
-  margin: 10px 0 12px;
+  margin: 12px 0;
 }
 
-.demo-actions button {
+.demo-actions .demo-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
   border: 1px solid #3c628e;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #113154;
   color: #e8f3ff;
-  padding: 9px 12px;
-  font-size: 0.84rem;
+  padding: 12px 14px;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.demo-actions button:hover {
+.demo-actions .demo-btn:hover:not(:disabled) {
   border-color: #66b3ff;
+  background: #16406b;
 }
 
-.demo-actions button:disabled {
-  opacity: 0.65;
+.demo-actions .demo-btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.demo-actions .demo-btn.running {
+  border-color: #ffd36a;
+  opacity: 1;
+}
+
+.demo-step {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1f5a92;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.demo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demo-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.demo-path {
+  font-size: 0.8rem;
+  color: #b7d4f2;
+  line-height: 1.35;
+}
+
+.demo-handler {
+  font-size: 0.72rem;
+  color: #8fd4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.demo-running {
+  margin: 0 0 8px;
+  color: #ffd36a;
+}
+
+.demo-result-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.demo-handler-chip {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #3c628e;
+  color: #8fd4ff;
+}
+
+.demo-next-steps {
+  margin: 4px 0 6px 18px;
+  padding: 0;
+  color: #dbeeff;
+  font-size: 0.86rem;
+}
+
+.demo-next-steps li {
+  margin: 3px 0;
 }
 
 .demo-error {
