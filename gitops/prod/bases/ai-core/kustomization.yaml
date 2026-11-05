@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ogx-server.yaml
+  - gen-ai-mcp-servers.yaml
   - rag-docs-seed-job.yaml
   - rag-runbooks-seed-job.yaml
   - ocpai-34-demo-enablement.yaml

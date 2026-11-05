@@ -1,0 +1,48 @@
+# Registers the Dark NOC MCP servers in OpenShift AI Gen AI Studio
+# (AI Assets → MCP servers / Playground). The Gen AI backend reads this
+# ConfigMap by name; each key is a server, each value an MCPServerConfig
+# {url, transport, description}. Servers are in-cluster FastMCP (streamable-http).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gen-ai-aa-mcp-servers
+  namespace: redhat-ods-applications
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+data:
+  dark-noc-openshift: |
+    {
+      "url": "http://mcp-openshift.dark-noc-mcp.svc.cluster.local:8001/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · OpenShift edge operations (dark-noc-edge). Tools: get_pods, get_events, get_pod_logs, rollout_restart, patch_deployment_memory."
+    }
+  dark-noc-lokistack: |
+    {
+      "url": "http://mcp-lokistack.dark-noc-mcp.svc.cluster.local:8002/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · LokiStack log search for incident evidence. Tools: query_logs, get_recent_errors, count_errors."
+    }
+  dark-noc-kafka: |
+    {
+      "url": "http://mcp-kafka.dark-noc-mcp.svc.cluster.local:8003/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · Kafka event bus (nginx-logs, incident topics). Tools: list_topics, consume_topic, produce_message, get_consumer_lag."
+    }
+  dark-noc-aap: |
+    {
+      "url": "http://mcp-aap.dark-noc-mcp.svc.cluster.local:8004/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · Ansible Automation Platform remediation. Tools: list_job_templates, launch_job, upsert_job_template, get_job_status, get_job_output."
+    }
+  dark-noc-slack: |
+    {
+      "url": "http://mcp-slack.dark-noc-mcp.svc.cluster.local:8005/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · Slack #demos notifications. Tools: send_alert, send_remediation, send_message, send_incident_ticket."
+    }
+  dark-noc-servicenow: |
+    {
+      "url": "http://mcp-servicenow.dark-noc-mcp.svc.cluster.local:8006/mcp",
+      "transport": "streamable-http",
+      "description": "Dark NOC · ServiceNow ITSM incidents (incl. Field Services dispatch). Tools: create_incident, update_incident, get_incident, resolve_incident."
+    }
