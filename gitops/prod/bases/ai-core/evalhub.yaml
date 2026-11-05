@@ -33,3 +33,31 @@ spec:
     - safety-and-fairness-v1
     - toxicity-and-ethical-principles
     - model-validation
+---
+# Evaluation jobs run in tenant projects (namespaces labelled
+# evalhub.trustyai.opendatahub.io/tenant=true) and report status/results back to
+# EvalHub. The default redhat-ods-applications NetworkPolicy only admits
+# OpenShift AI namespaces, so results were dropped and jobs stayed "pending".
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-evalhub-tenants
+  namespace: redhat-ods-applications
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  podSelector:
+    matchLabels:
+      app: eval-hub
+      component: api
+      instance: evalhub
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              evalhub.trustyai.opendatahub.io/tenant: "true"
+      ports:
+        - protocol: TCP
+          port: 8443
