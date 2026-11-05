@@ -1,0 +1,35 @@
+# TrustyAI EvalHub: enables OpenShift AI → Evaluations for all projects.
+# The eval-hub-ui backend looks for an EvalHub CR in the user's project first,
+# then falls back to the dashboard namespace (redhat-ods-applications), and uses
+# its status.url. Providers/collections refer to the OOTB ConfigMaps shipped by
+# the TrustyAI operator (labels evalhub-provider-name / evalhub-collection-name).
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: EvalHub
+metadata:
+  name: evalhub
+  namespace: redhat-ods-applications
+  labels:
+    app.kubernetes.io/part-of: dark-noc
+spec:
+  replicas: 1
+  database:
+    type: sqlite
+  providers:
+    - lm-evaluation-harness
+    - lighteval
+    - guidellm
+    - garak
+    - ragas
+    - inspect
+    - deepeval
+    - ibm-clear
+  collections:
+    - leaderboard-v2
+    - standard-llm-evals-v1
+    - instruction-following-v1
+    - reasoning-v1
+    - coding-v1
+    - long-context-v1
+    - safety-and-fairness-v1
+    - toxicity-and-ethical-principles
+    - model-validation
