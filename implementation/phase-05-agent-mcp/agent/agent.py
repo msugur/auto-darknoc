@@ -823,9 +823,19 @@ def route_after_analyze(state: IncidentState) -> str:
 
 
 def route_after_remediate(state: IncidentState) -> str:
-    """Router: successful remediation -> notify; all automated fixes failed -> field dispatch."""
+    """
+    Router after remediation:
+      - fix succeeded                      -> notify (Slack + auto-resolved ticket)
+      - fix attempted and every path failed -> field dispatch
+      - nothing to remediate (e.g. an informational nginx 404 logged at
+        level=error)                        -> audit only, no ticket/alert
+    """
     rem = state.get("remediation_result") or {}
-    return "notify" if rem.get("success") else "field_service"
+    if rem.get("success"):
+        return "notify"
+    if rem.get("action_taken") and rem.get("tool_used") not in ("", "none", None):
+        return "field_service"
+    return "audit"
 
 
 # ─────────────────────────────────────────────
@@ -855,6 +865,7 @@ def build_agent_graph() -> StateGraph:
     workflow.add_conditional_edges("remediate", route_after_remediate, {
         "notify": "notify",
         "field_service": "field_service",
+        "audit": "audit",
     })
     workflow.add_edge("field_service", "notify")
     workflow.add_edge("escalate", "notify")
