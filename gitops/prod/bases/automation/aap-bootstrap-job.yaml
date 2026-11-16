@@ -47,6 +47,7 @@ spec:
               import json
               import os
               import ssl
+              import time
               import urllib.parse
               import urllib.request
 
@@ -109,6 +110,13 @@ spec:
                       req("POST", f"{api}/projects/{p['id']}/update/", {})
                   except Exception as e:
                       print(f"project update trigger warning: {e}")
+                  # Templates are validated against synced playbooks; wait for SCM sync
+                  for _ in range(60):
+                      st = get(f"projects/{p['id']}").get("status")
+                      if st in ("successful", "failed", "error", "canceled"):
+                          print(f"project {name} sync status: {st}")
+                          break
+                      time.sleep(5)
                   return int(p["id"])
 
               def ensure_inventory(name):
@@ -147,14 +155,8 @@ spec:
                           patch("job_templates", int(jt["id"]), payload)
                           print(f"updated template {name}: {jt.get('id')}")
                   except Exception as e:
-                      print(f"template bootstrap warning for {name} ({playbook}): {e}; retrying with hello_world.yml")
-                      payload["playbook"] = "hello_world.yml"
-                      if not jt:
-                          jt = post("job_templates", payload)
-                          print(f"created template {name} with fallback playbook: {jt.get('id')}")
-                      else:
-                          patch("job_templates", int(jt["id"]), payload)
-                          print(f"updated template {name} with fallback playbook: {jt.get('id')}")
+                      print(f"template bootstrap error for {name} ({playbook}): {e}")
+                      raise
                   return int(jt["id"])
 
               def ensure_edge_credential():
@@ -197,23 +199,12 @@ spec:
                   except Exception as e:
                       print(f"credential association warning for template {job_template_id}: {e}")
 
-              project_id = ensure_project("Demo Project")
+              project_id = ensure_project("Dark NOC Playbooks")   # repo playbooks (DEMO_SCM_URL)
               inventory_id = ensure_inventory("Demo Inventory")
               edge_cred_id = ensure_edge_credential()
-              hello_id = ensure_template("Demo Job Template", project_id, inventory_id, "hello_world.yml")
               restart_id = ensure_template("restart-nginx", project_id, inventory_id, "playbooks/restart-nginx.yaml")
               lightspeed_id = ensure_template("lightspeed-generate-and-run", project_id, inventory_id, "playbooks/lightspeed-generate-and-run.yaml")
               associate_credential(restart_id, edge_cred_id)
               associate_credential(lightspeed_id, edge_cred_id)
-
-              jobs = get("jobs", {"job_template": hello_id}).get("count", 0)
-              if int(jobs) == 0:
-                  try:
-                      j = req("POST", f"{api}/job_templates/{hello_id}/launch/", {})
-                      print(f"launched demo job {j.get('id')}")
-                  except Exception as e:
-                      print(f"demo job launch warning: {e}")
-              else:
-                  print(f"demo job already exists: {jobs}")
 
               print("bootstrap complete")
